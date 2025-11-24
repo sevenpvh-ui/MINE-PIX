@@ -86,6 +86,26 @@
         </div>
     </div>
 
+    <div id="profile-modal" class="overlay hidden">
+        <div class="modal" style="max-width: 500px;">
+            <h2>📜 Histórico Financeiro</h2>
+            <div style="max-height: 300px; overflow-y: auto; margin-bottom: 20px;">
+                <table style="width: 100%; font-size: 12px; text-align: left; border-collapse: collapse;">
+                    <thead>
+                        <tr style="color: #b1bad3; border-bottom: 1px solid #333;">
+                            <th style="padding: 8px;">Tipo</th>
+                            <th>Valor</th>
+                            <th>Status</th>
+                            <th>Data</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transaction-list"></tbody>
+                </table>
+            </div>
+            <button onclick="closeModal('profile-modal')" class="close-btn">FECHAR</button>
+        </div>
+    </div>
+
     <div id="deposit-modal" class="overlay hidden">
         <div class="modal">
             <h2>💰 Depositar via PIX</h2>
@@ -93,10 +113,7 @@
             <input type="number" id="dep-amount" placeholder="Valor (Ex: 20.00)">
             
             <button onclick="generatePix()">GERAR QR CODE</button>
-
-            <button onclick="simulateDeposit()" style="background: #00a8ff; color: white; margin-top: 10px;">
-                ⚡ SIMULAR PAGAMENTO APROVADO
-            </button>
+            <button onclick="simulateDeposit()" style="background: #00a8ff; color: white; margin-top: 10px;">⚡ SIMULAR PAGAMENTO APROVADO</button>
             
             <div id="pix-area" class="hidden" style="margin-top: 15px;">
                 <img id="qr-img" src="" style="width: 200px; border-radius: 10px; margin-bottom: 10px; border: 2px solid white;">
@@ -127,7 +144,10 @@
     <div class="sidebar">
         <div class="logo-area">💎 Mines Pro</div>
         <div class="user-info">
-            CPF: <span id="user-cpf-display">...</span>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>CPF: <span id="user-cpf-display">...</span></span>
+                <button onclick="openModal('profile-modal')" style="background: #2f4553; border: none; color: white; cursor: pointer; padding: 5px 10px; border-radius: 5px; font-size: 10px;">📜 EXTRATO</button>
+            </div>
         </div>
         
         <div class="control-group">
