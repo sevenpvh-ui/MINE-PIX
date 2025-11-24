@@ -4,9 +4,7 @@ const UserSchema = new mongoose.Schema({
     cpf: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     balance: { type: Number, default: 0.00 },
-    
-    // NOVO: Controle de Bônus Diário
-    lastDailyBonus: { type: Date, default: null },
+    lastDailyBonus: { type: Date, default: null }, // Controle do Bônus
 
     pixKey: { type: String, default: '' },
     pixKeyType: { type: String, default: '' },
@@ -22,7 +20,7 @@ const UserSchema = new mongoose.Schema({
     },
 
     transactions: [{
-        type: { type: String, enum: ['deposit', 'withdraw', 'bonus'] }, // Adicionado 'bonus'
+        type: { type: String, enum: ['deposit', 'withdraw', 'bonus'] },
         amount: Number,
         status: { type: String, enum: ['pending', 'approved', 'rejected'] },
         mpPaymentId: String,
