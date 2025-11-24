@@ -1,0 +1,15 @@
+{
+  "name": "Mines Pro",
+  "short_name": "Mines",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f1923",
+  "theme_color": "#00e701",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
