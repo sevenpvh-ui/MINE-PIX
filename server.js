@@ -4,6 +4,8 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const { MercadoPagoConfig, Payment } = require('mercadopago');
+
+// Importa a lógica do jogo (Certifique-se de ter o arquivo gameEngine.js)
 const { createGrid, calculateMultiplier } = require('./gameEngine');
 const User = require('./models/User');
 
@@ -12,25 +14,27 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
+// --- CONFIGURAÇÕES ---
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI;
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN;
 const SITE_URL = process.env.SITE_URL; 
 
+// Conexão Mongo
 mongoose.connect(MONGO_URI)
     .then(() => console.log("✅ MongoDB Conectado"))
     .catch(err => console.error("❌ Erro Mongo:", err));
 
+// Config Mercado Pago
 const client = new MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN });
 const payment = new Payment(client);
 
 // --- ROTA DE REGISTRO (CPF) ---
 app.post('/api/auth/register', async (req, res) => {
-    const { cpf, password } = req.body; // AGORA RECEBE CPF
+    const { cpf, password } = req.body;
     try {
         if (!cpf || !password) return res.status(400).json({ error: "CPF e senha obrigatórios" });
         
-        // Verifica se CPF já existe (limpa pontos e traços se tiver)
         const cleanCpf = cpf.replace(/\D/g, ''); 
         if (await User.findOne({ cpf: cleanCpf })) return res.status(400).json({ error: "CPF já cadastrado" });
         
@@ -40,7 +44,7 @@ app.post('/api/auth/register', async (req, res) => {
         res.json({ message: "Criado", userId: user._id, cpf: user.cpf, balance: user.balance });
     } catch (e) { 
         console.error(e);
-        res.status(500).json({ error: "Erro ao registrar" }); 
+        res.status(500).json({ error: "Erro ao registrar: " + e.message }); 
     }
 });
 
@@ -68,21 +72,23 @@ app.get('/api/me/:userId', async (req, res) => {
     } catch (e) { res.status(500).json({ error: "Erro" }); }
 });
 
-// --- PAGAMENTO (PIX) ---
+// --- ROTAS DE PAGAMENTO ---
+
+// 1. Gerar PIX Real (Mercado Pago)
 app.post('/api/payment/deposit', async (req, res) => {
     const { userId, amount } = req.body;
     try {
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ error: "User not found" });
 
-        // Mercado Pago EXIGE email. Geramos um falso baseado no CPF.
+        // Email falso para satisfazer a API do Mercado Pago
         const fakeEmail = `${user.cpf}@minespro.com`;
 
         const body = {
             transaction_amount: parseFloat(amount),
             description: 'Creditos Mines',
             payment_method_id: 'pix',
-            payer: { email: fakeEmail }, // Email falso para passar na API
+            payer: { email: fakeEmail },
             notification_url: `${SITE_URL}/api/webhook`
         };
 
@@ -105,16 +111,43 @@ app.post('/api/payment/deposit', async (req, res) => {
 
     } catch (e) { 
         console.error(e);
-        res.status(500).json({ error: "Erro ao gerar PIX" }); 
+        res.status(500).json({ error: "Erro ao gerar PIX. Verifique o Token." }); 
     }
 });
 
-// ... (MANTENHA AS OUTRAS ROTAS IGUAIS: webhook, withdraw, game/start, game/play, game/cashout) ...
-// Copie o resto do arquivo server.js anterior a partir da linha do Webhook, pois a lógica do jogo não muda.
+// 2. ROTA DE DEBUG (SIMULAÇÃO DE PAGAMENTO - BOTAO AZUL)
+app.post('/api/debug/deposit', async (req, res) => {
+    const { userId, amount } = req.body;
+    
+    try {
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
+        
+        const valor = parseFloat(amount);
+        if (valor <= 0) return res.status(400).json({ error: "Valor inválido" });
 
-// --- MANTENHA O RESTO DO CÓDIGO (WEBHOOK E JOGO) IGUAL AO ANTERIOR ---
-// Só vou reenviar o finalzinho para garantir que você tenha o arquivo fechado corretamente:
+        // Adiciona o saldo na hora
+        user.balance += valor;
 
+        // Cria registro falso
+        user.transactions.push({
+            type: 'deposit',
+            amount: valor,
+            status: 'approved',
+            mpPaymentId: 'SIMULADO_' + Date.now(),
+            createdAt: Date.now()
+        });
+
+        await user.save();
+        console.log(`⚡ Depósito Simulado: ${user.cpf} recebeu R$ ${valor}`);
+        res.json({ message: "Saldo adicionado!", balance: user.balance });
+
+    } catch (e) {
+        res.status(500).json({ error: "Erro ao simular" });
+    }
+});
+
+// 3. Webhook
 app.post('/api/webhook', async (req, res) => {
     const { action, data } = req.body;
     if (action === 'payment.created' || action === 'payment.updated') {
@@ -136,6 +169,7 @@ app.post('/api/webhook', async (req, res) => {
     res.status(200).send("OK");
 });
 
+// 4. Saque
 app.post('/api/payment/withdraw', async (req, res) => {
     const { userId, amount, pixKey, pixKeyType } = req.body;
     try {
@@ -150,6 +184,7 @@ app.post('/api/payment/withdraw', async (req, res) => {
     } catch (e) { res.status(500).json({ error: "Erro saque" }); }
 });
 
+// --- ROTAS DO JOGO ---
 app.post('/api/game/start', async (req, res) => {
     const { userId, betAmount, minesCount } = req.body;
     try {
