@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Admin - Mines</title>
+    <style>
+        body { background-color: #0f1923; color: white; font-family: sans-serif; padding: 20px; }
+        h1, h2 { color: #00e701; }
+        
+        .stats-box { display: flex; gap: 20px; margin-bottom: 30px; }
+        .card { background: #1a242d; padding: 20px; border-radius: 10px; min-width: 200px; border: 1px solid #2f4553; }
+        .card h3 { margin: 0 0 10px 0; color: #b1bad3; font-size: 14px; }
+        .card p { margin: 0; font-size: 24px; font-weight: bold; }
+
+        table { width: 100%; border-collapse: collapse; background: #1a242d; border-radius: 10px; overflow: hidden; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #2f4553; }
+        th { background: #2f4553; color: #b1bad3; font-size: 12px; text-transform: uppercase; }
+        tr:hover { background: #25303b; }
+
+        .btn { padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .approve { background: #00e701; color: black; }
+        .reject { background: #ff4d4d; color: white; }
+        .btn:hover { filter: brightness(1.1); }
+
+        #login-screen { position: fixed; top:0; left:0; width:100%; height:100%; background:#0f1923; display:flex; justify-content:center; align-items:center; z-index:100; }
+        input { padding: 10px; border-radius: 5px; border: 1px solid #333; }
+    </style>
+</head>
+<body>
+
+    <div id="login-screen">
+        <div style="text-align: center;">
+            <h2>🔒 Área Restrita</h2>
+            <input type="password" id="admin-pass" placeholder="Senha do Admin">
+            <button class="btn approve" onclick="checkAdmin()">ENTRAR</button>
+        </div>
+    </div>
+
+    <div id="dashboard" style="display: none;">
+        <h1>🕵️ Painel Administrativo</h1>
+        
+        <div class="stats-box">
+            <div class="card">
+                <h3>USUÁRIOS TOTAIS</h3>
+                <p id="total-users">0</p>
+            </div>
+            <div class="card">
+                <h3>SALDO EM JOGO (Dívida)</h3>
+                <p id="total-balance">R$ 0.00</p>
+            </div>
+        </div>
+
+        <h2>💸 Pedidos de Saque Pendentes</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>CPF</th>
+                    <th>Valor</th>
+                    <th>Chave PIX</th>
+                    <th>Tipo</th>
+                    <th>Data</th>
+                    <th>Ação</th>
+                </tr>
+            </thead>
+            <tbody id="withdraw-list">
+                </tbody>
+        </table>
+    </div>
+
+    <script>
+        let adminKey = '';
+
+        function checkAdmin() {
+            const pass = document.getElementById('admin-pass').value;
+            // Senha simples hardcoded no front só pra exemplo (A segurança real tá no server)
+            if(pass === 'admin123') {
+                adminKey = pass;
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                loadDashboard();
+            } else {
+                alert("Senha Incorreta!");
+            }
+        }
+
+        async function loadDashboard() {
+            const res = await fetch('/api/admin/dashboard', {
+                headers: { 'secret': adminKey }
+            });
+            const data = await res.json();
+
+            if(data.error) return alert(data.error);
+
+            document.getElementById('total-users').innerText = data.totalUsers;
+            document.getElementById('total-balance').innerText = `R$ ${data.totalBalance.toFixed(2)}`;
+
+            const tbody = document.getElementById('withdraw-list');
+            tbody.innerHTML = '';
+
+            if(data.pendingWithdrawals.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 20px;">Nenhum saque pendente.</td></tr>';
+                return;
+            }
+
+            data.pendingWithdrawals.forEach(w => {
+                const row = `
+                    <tr>
+                        <td>${w.cpf}</td>
+                        <td style="color: #00e701; font-weight:bold;">R$ ${w.amount.toFixed(2)}</td>
+                        <td>${w.pixKey}</td>
+                        <td>${w.pixType}</td>
+                        <td>${new Date(w.date).toLocaleString()}</td>
+                        <td>
+                            <button class="btn approve" onclick="processWithdraw('${w.userId}', '${w.transId}', 'approve')">Pagar</button>
+                            <button class="btn reject" onclick="processWithdraw('${w.userId}', '${w.transId}', 'reject')">Rejeitar</button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        async function processWithdraw(userId, transId, action) {
+            const confirmText = action === 'approve' ? "Confirmar que você PAGOU esse PIX?" : "Confirmar REJEIÇÃO e devolver saldo?";
+            if(!confirm(confirmText)) return;
+
+            const res = await fetch('/api/admin/action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, transId, action, secret: adminKey })
+            });
+            
+            const data = await res.json();
+            alert(data.message);
+            loadDashboard(); // Recarrega a lista
+        }
+    </script>
+</body>
+</html>
