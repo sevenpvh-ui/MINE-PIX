@@ -1,15 +1,15 @@
 const mongoose = require('mongoose');
 
 const UserSchema = new mongoose.Schema({
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true }, // Senha criptografada
-    balance: { type: Number, default: 0.00 }, // Começa zerado
+    // MUDANÇA AQUI: CPF é a nova chave única
+    cpf: { type: String, required: true, unique: true }, 
+    password: { type: String, required: true },
+    balance: { type: Number, default: 0.00 },
     
-    // Dados para saque (Chave PIX)
+    // Chave PIX para onde ele recebe o saque
     pixKey: { type: String, default: '' },
-    pixKeyType: { type: String, default: '' }, // CPF, Email, etc.
+    pixKeyType: { type: String, default: '' },
 
-    // Estado do jogo (se cair a internet, volta aqui)
     activeGame: {
         grid: [String],
         revealed: [Boolean],
@@ -20,13 +20,12 @@ const UserSchema = new mongoose.Schema({
         isGameOver: { type: Boolean, default: true }
     },
 
-    // Extrato Financeiro
     transactions: [{
-        type: { type: String, enum: ['deposit', 'withdraw'] }, // Depósito ou Saque
+        type: { type: String, enum: ['deposit', 'withdraw'] },
         amount: Number,
         status: { type: String, enum: ['pending', 'approved', 'rejected'] },
-        mpPaymentId: String, // ID do Mercado Pago
-        qrCodeBase64: String, // Para mostrar de novo se precisar
+        mpPaymentId: String,
+        qrCodeBase64: String,
         createdAt: { type: Date, default: Date.now }
     }]
 });
