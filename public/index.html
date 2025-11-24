@@ -3,18 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mines Pro</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Mines Pro - Real Money</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 </head>
 <body>
 
+    <div id="auth-screen" class="overlay">
+        <div class="modal">
+            <h2>🔐 Acesso Mines Pro</h2>
+            <input type="email" id="auth-email" placeholder="Seu E-mail">
+            <input type="password" id="auth-pass" placeholder="Sua Senha">
+            <button onclick="login()">ENTRAR</button>
+            <button onclick="register()" class="secondary-btn">CRIAR CONTA</button>
+            <p id="auth-msg"></p>
+        </div>
+    </div>
+
+    <div id="deposit-modal" class="overlay hidden">
+        <div class="modal">
+            <h2>💰 Depositar via PIX</h2>
+            <p>Saldo cai automaticamente em segundos.</p>
+            <input type="number" id="dep-amount" placeholder="Valor (Ex: 20.00)">
+            <button onclick="generatePix()">GERAR QR CODE</button>
+            
+            <div id="pix-area" class="hidden">
+                <img id="qr-img" src="" style="width: 200px; border-radius: 10px;">
+                <textarea id="copy-paste" rows="3" readonly></textarea>
+                <button onclick="copyPix()">COPIAR CÓDIGO</button>
+                <p class="blink">Aguardando pagamento...</p>
+            </div>
+            <button onclick="closeModal('deposit-modal')" class="close-btn">FECHAR</button>
+        </div>
+    </div>
+
+    <div id="withdraw-modal" class="overlay hidden">
+        <div class="modal">
+            <h2>💸 Sacar Dinheiro</h2>
+            <input type="number" id="with-amount" placeholder="Valor do Saque">
+            <select id="pix-type">
+                <option value="cpf">CPF</option>
+                <option value="email">E-mail</option>
+                <option value="phone">Telefone</option>
+                <option value="random">Chave Aleatória</option>
+            </select>
+            <input type="text" id="pix-key" placeholder="Sua Chave PIX">
+            <button onclick="requestWithdraw()">SOLICITAR SAQUE</button>
+            <button onclick="closeModal('withdraw-modal')" class="close-btn">FECHAR</button>
+        </div>
+    </div>
+
     <div class="sidebar">
         <div class="logo-area">💎 Mines Pro</div>
+        <div class="user-info">
+            <small id="user-email-display">...</small>
+        </div>
         
         <div class="control-group">
-            <label>VALOR DA APOSTA</label>
+            <label>VALOR APOSTA</label>
             <div class="input-row">
-                <input type="number" id="betAmount" value="10.00" step="0.50">
+                <input type="number" id="betAmount" value="5.00">
                 <button onclick="adjustBet(0.5)">½</button>
                 <button onclick="adjustBet(2)">2x</button>
             </div>
@@ -27,25 +75,24 @@
                 <option value="3" selected>3 Minas</option>
                 <option value="5">5 Minas</option>
                 <option value="10">10 Minas</option>
-                <option value="20">20 Minas</option>
             </select>
         </div>
 
-        <button id="action-btn">COMEÇAR O JOGO</button>
+        <button id="action-btn">COMEÇAR</button>
         
-        <div class="footer-info">Provably Fair System</div>
+        <div class="finance-btns">
+            <button onclick="openModal('deposit-modal')" class="dep-btn">DEPOSITAR</button>
+            <button onclick="openModal('withdraw-modal')" class="with-btn">SACAR</button>
+        </div>
     </div>
 
     <div class="game-area">
         <div class="balance-display">
-            <span class="symbol">R$</span>
-            <span id="balance">0.00</span>
+            R$ <span id="balance">0.00</span>
         </div>
-
         <div class="grid-container" id="grid-container">
             <div class="grid" id="grid"></div>
         </div>
-
         <div class="stats-bar">
             <div id="multiplier-display">1.00x</div>
             <div id="message-display">Faça sua aposta</div>
