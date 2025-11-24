@@ -1,156 +1,232 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const app = express();
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+const { MercadoPagoConfig, Payment } = require('mercadopago');
 
+const { createGrid, calculateMultiplier } = require('./gameEngine');
+const User = require('./models/User');
+
+const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// ARMAZENAMENTO NA MEMÓRIA (Se reiniciar o servidor, zera tudo)
-// Em produção, isso seria um Banco de Dados (Postgres/MongoDB)
-const sessions = {}; 
-
-// Configurações do jogo
-const HOUSE_EDGE = 0.03; // 3% de vantagem da casa (opcional, para realismo)
-
-function generateGrid(minesCount) {
-    const grid = Array(25).fill('diamond');
-    let placed = 0;
-    while (placed < minesCount) {
-        let idx = Math.floor(Math.random() * 25);
-        if (grid[idx] !== 'mine') {
-            grid[idx] = 'mine';
-            placed++;
-        }
-    }
-    return grid;
-}
-
-// Calcula quanto o multiplicador sobe a cada diamante
-// Fórmula simplificada baseada na probabilidade
-function calculateNextMultiplier(mines, openedSpots) {
-    const totalSpots = 25;
-    const remainingSpots = totalSpots - openedSpots;
-    const remainingSafe = remainingSpots - mines;
-    
-    // Probabilidade de acertar = seguros / restantes
-    // O payout justo seria 1 / probabilidade
-    // Aplicamos uma margem de segurança
-    if (remainingSafe <= 0) return 0;
-    
-    const probability = remainingSafe / remainingSpots;
-    const multiplier = 0.99 / probability; // 0.99 simula a margem da casa
-    return multiplier;
-}
-
-// ROTA: Iniciar Jogo (Apostar)
-app.post('/api/start', (req, res) => {
-    const { userId, betAmount, minesCount } = req.body;
-
-    // Inicializa saldo se usuário novo
-    if (!sessions[userId]) sessions[userId] = { balance: 1000.00 }; // Começa com R$ 1000
-    
-    const user = sessions[userId];
-
-    if (user.activeGame) return res.status(400).json({ error: "Jogo já em andamento!" });
-    if (betAmount <= 0) return res.status(400).json({ error: "Aposta inválida" });
-    if (user.balance < betAmount) return res.status(400).json({ error: "Saldo insuficiente" });
-
-    // Deduz a aposta
-    user.balance -= parseFloat(betAmount);
-
-    // Cria o jogo
-    user.activeGame = {
-        grid: generateGrid(minesCount),
-        revealed: Array(25).fill(false),
-        minesCount: minesCount,
-        betAmount: parseFloat(betAmount),
-        currentMultiplier: 1.0,
-        diamondsFound: 0,
-        isGameOver: false
-    };
-
-    res.json({
-        balance: user.balance,
-        message: "Aposta feita!",
-        currentMultiplier: 1.0
-    });
-});
-
-// ROTA: Jogar (Clicar no quadrado)
-app.post('/api/play', (req, res) => {
-    const { userId, index } = req.body;
-    const user = sessions[userId];
-
-    if (!user || !user.activeGame || user.activeGame.isGameOver) {
-        return res.status(400).json({ error: "Nenhum jogo ativo." });
-    }
-
-    const game = user.activeGame;
-
-    if (game.revealed[index]) return res.status(400).json({ error: "Já clicado" });
-
-    game.revealed[index] = true;
-
-    // SE FOR MINA (PERDEU)
-    if (game.grid[index] === 'mine') {
-        game.isGameOver = true;
-        const lostGrid = game.grid; // Guarda o grid para mostrar
-        user.activeGame = null; // Reseta jogo
-        
-        return res.json({
-            status: 'boom',
-            grid: lostGrid,
-            balance: user.balance
-        });
-    }
-
-    // SE FOR DIAMANTE (CONTINUA)
-    game.diamondsFound++;
-    
-    // Atualiza multiplicador acumulado
-    // Lógica simplificada: Multiplicador atual * novo fator
-    const riskFactor = 1 + (game.minesCount / 25); // Simples fator de crescimento
-    game.currentMultiplier = game.currentMultiplier * (1 + (game.minesCount / (25 - game.diamondsFound)));
-    
-    res.json({
-        status: 'safe',
-        multiplier: game.currentMultiplier.toFixed(2),
-        potentialWin: (game.betAmount * game.currentMultiplier).toFixed(2)
-    });
-});
-
-// ROTA: Cashout (Retirar Dinheiro)
-app.post('/api/cashout', (req, res) => {
-    const { userId } = req.body;
-    const user = sessions[userId];
-
-    if (!user || !user.activeGame) return res.status(400).json({ error: "Sem jogo para retirar." });
-
-    const game = user.activeGame;
-    
-    // Calcula ganho
-    const winAmount = game.betAmount * game.currentMultiplier;
-    user.balance += winAmount;
-
-    // Encerra o jogo
-    const fullGrid = game.grid;
-    user.activeGame = null;
-
-    res.json({
-        status: 'cashout',
-        winAmount: winAmount.toFixed(2),
-        balance: user.balance,
-        grid: fullGrid
-    });
-});
-
-// ROTA: Pegar Saldo
-app.get('/api/me/:userId', (req, res) => {
-    const { userId } = req.params;
-    if (!sessions[userId]) sessions[userId] = { balance: 1000.00 };
-    res.json({ balance: sessions[userId].balance });
-});
-
+// --- CONFIGURAÇÕES ---
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor Casino rodando na porta ${PORT}`));
+const MONGO_URI = process.env.MONGO_URI;
+const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN; // Token do Mercado Pago
+// IMPORTANTE: Mude isso para o link do seu site no Render
+const SITE_URL = process.env.SITE_URL || 'https://SEU-APP-NO-RENDER.onrender.com';
+
+// Conexão Mongo
+mongoose.connect(MONGO_URI)
+    .then(() => console.log("✅ MongoDB Conectado"))
+    .catch(err => console.error("❌ Erro Mongo:", err));
+
+// Config Mercado Pago
+const client = new MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN });
+const payment = new Payment(client);
+
+// --- ROTAS DE AUTENTICAÇÃO ---
+
+// Registro
+app.post('/api/auth/register', async (req, res) => {
+    const { email, password } = req.body;
+    try {
+        if (await User.findOne({ email })) return res.status(400).json({ error: "Email já existe" });
+        
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const user = await User.create({ email, password: hashedPassword });
+        
+        res.json({ message: "Criado com sucesso", userId: user._id, email: user.email, balance: user.balance });
+    } catch (e) { res.status(500).json({ error: "Erro ao registrar" }); }
+});
+
+// Login
+app.post('/api/auth/login', async (req, res) => {
+    const { email, password } = req.body;
+    try {
+        const user = await User.findOne({ email });
+        if (!user) return res.status(400).json({ error: "Usuário não encontrado" });
+
+        if (!await bcrypt.compare(password, user.password)) {
+            return res.status(400).json({ error: "Senha incorreta" });
+        }
+
+        res.json({ message: "Logado", userId: user._id, email: user.email, balance: user.balance });
+    } catch (e) { res.status(500).json({ error: "Erro ao logar" }); }
+});
+
+// Obter dados do usuário
+app.get('/api/me/:userId', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.userId);
+        if(!user) return res.status(404).json({error: "User not found"});
+        res.json({ balance: user.balance, email: user.email });
+    } catch (e) { res.status(500).json({ error: "Erro" }); }
+});
+
+// --- ROTAS DE PAGAMENTO (PIX) ---
+
+// 1. Gerar PIX (Depósito)
+app.post('/api/payment/deposit', async (req, res) => {
+    const { userId, amount } = req.body;
+    try {
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
+        
+        if (amount < 1) return res.status(400).json({ error: "Mínimo R$ 1,00" });
+
+        // Cria preferência no Mercado Pago
+        const body = {
+            transaction_amount: parseFloat(amount),
+            description: 'Creditos Mines',
+            payment_method_id: 'pix',
+            payer: { email: user.email },
+            notification_url: `${SITE_URL}/api/webhook` // ONDE O MP AVISA
+        };
+
+        const result = await payment.create({ body });
+        
+        // Salva transação pendente
+        user.transactions.push({
+            type: 'deposit',
+            amount: parseFloat(amount),
+            status: 'pending',
+            mpPaymentId: result.id.toString(),
+            qrCodeBase64: result.point_of_interaction.transaction_data.qr_code_base64
+        });
+        await user.save();
+
+        res.json({
+            copyPaste: result.point_of_interaction.transaction_data.qr_code,
+            qrCodeBase64: result.point_of_interaction.transaction_data.qr_code_base64,
+            paymentId: result.id
+        });
+
+    } catch (e) { 
+        console.error(e);
+        res.status(500).json({ error: "Erro ao gerar PIX" }); 
+    }
+});
+
+// 2. Webhook (Onde o MP avisa que pagou)
+app.post('/api/webhook', async (req, res) => {
+    const { action, data } = req.body;
+    
+    if (action === 'payment.created' || action === 'payment.updated') {
+        try {
+            // Consulta status real no MP
+            const payInfo = await payment.get({ id: data.id });
+            
+            if (payInfo.status === 'approved') {
+                const user = await User.findOne({ "transactions.mpPaymentId": data.id });
+                if (user) {
+                    const trans = user.transactions.find(t => t.mpPaymentId == data.id);
+                    if (trans && trans.status === 'pending') {
+                        trans.status = 'approved';
+                        user.balance += trans.amount; // ADICIONA O SALDO
+                        await user.save();
+                        console.log(`🤑 Depósito Aprovado: ${user.email} - R$${trans.amount}`);
+                    }
+                }
+            }
+        } catch (e) { console.error("Webhook Error", e); }
+    }
+    res.status(200).send("OK");
+});
+
+// 3. Solicitar Saque
+app.post('/api/payment/withdraw', async (req, res) => {
+    const { userId, amount, pixKey, pixKeyType } = req.body;
+    try {
+        const user = await User.findById(userId);
+        if (user.balance < amount) return res.status(400).json({ error: "Saldo insuficiente" });
+
+        user.balance -= parseFloat(amount); // Remove saldo na hora
+        user.pixKey = pixKey;
+        user.pixKeyType = pixKeyType;
+        
+        user.transactions.push({
+            type: 'withdraw',
+            amount: parseFloat(amount),
+            status: 'pending', // Pendente aprovação do Admin
+            createdAt: Date.now()
+        });
+        
+        await user.save();
+        res.json({ message: "Saque solicitado! Aguarde processamento.", balance: user.balance });
+    } catch (e) { res.status(500).json({ error: "Erro no saque" }); }
+});
+
+
+// --- ROTAS DO JOGO (MINES) ---
+
+app.post('/api/game/start', async (req, res) => {
+    const { userId, betAmount, minesCount } = req.body;
+    try {
+        const user = await User.findById(userId);
+        if (user.balance < betAmount) return res.status(400).json({ error: "Saldo insuficiente" });
+        if (user.activeGame && !user.activeGame.isGameOver) return res.status(400).json({ error: "Jogo em andamento" });
+
+        user.balance -= parseFloat(betAmount);
+        user.activeGame = {
+            grid: createGrid(minesCount),
+            revealed: Array(25).fill(false),
+            minesCount,
+            betAmount,
+            currentMultiplier: 1.0,
+            diamondsFound: 0,
+            isGameOver: false
+        };
+        await user.save();
+        res.json({ balance: user.balance });
+    } catch (e) { res.status(500).json({ error: "Erro start" }); }
+});
+
+app.post('/api/game/play', async (req, res) => {
+    const { userId, index } = req.body;
+    try {
+        const user = await User.findById(userId);
+        const game = user.activeGame;
+        if (!game || game.isGameOver) return res.status(400).json({ error: "Sem jogo" });
+
+        if (game.revealed[index]) return res.status(400).json({ error: "Já clicado" });
+        game.revealed[index] = true;
+        user.markModified('activeGame.revealed');
+
+        if (game.grid[index] === 'mine') {
+            game.isGameOver = true;
+            await user.save();
+            return res.json({ status: 'boom', grid: game.grid });
+        }
+
+        game.diamondsFound++;
+        let nextMult = game.currentMultiplier * calculateMultiplier(game.minesCount, game.diamondsFound - 1);
+        if(game.diamondsFound === 1) nextMult = calculateMultiplier(game.minesCount, 0);
+        game.currentMultiplier = nextMult;
+        
+        await user.save();
+        res.json({ status: 'safe', multiplier: game.currentMultiplier.toFixed(2), potentialWin: (game.betAmount * game.currentMultiplier).toFixed(2) });
+    } catch (e) { res.status(500).json({ error: "Erro play" }); }
+});
+
+app.post('/api/game/cashout', async (req, res) => {
+    const { userId } = req.body;
+    try {
+        const user = await User.findById(userId);
+        const game = user.activeGame;
+        if (!game || game.isGameOver) return res.status(400).json({ error: "Erro" });
+
+        const win = game.betAmount * game.currentMultiplier;
+        user.balance += win;
+        game.isGameOver = true;
+        await user.save();
+        
+        res.json({ status: 'cashout', winAmount: win.toFixed(2), balance: user.balance, grid: game.grid });
+    } catch (e) { res.status(500).json({ error: "Erro cashout" }); }
+});
+
+app.listen(PORT, () => console.log(`🔥 Server online na porta ${PORT}`));
