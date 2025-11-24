@@ -4,8 +4,79 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mines Pro - Real Money</title>
-    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <style>
+        /* --- CSS EMBUTIDO PARA EVITAR ERROS DE CARREGAMENTO --- */
+        :root {
+            --bg-dark: #0f1923;
+            --bg-sidebar: #1a242d;
+            --accent: #00e701;
+            --danger: #ff4d4d;
+            --tile: #2f4553;
+            --tile-hover: #557086;
+            --text-muted: #b1bad3;
+        }
+
+        body { margin: 0; background-color: var(--bg-dark); color: white; font-family: 'Segoe UI', sans-serif; display: flex; height: 100vh; overflow: hidden; }
+
+        /* Sidebar */
+        .sidebar { width: 320px; background-color: var(--bg-sidebar); padding: 25px; display: flex; flex-direction: column; gap: 15px; box-shadow: 2px 0 10px rgba(0,0,0,0.3); z-index: 10; overflow-y: auto; }
+        .logo-area { font-size: 24px; font-weight: bold; margin-bottom: 10px; color: white; }
+        .user-info { font-size: 12px; color: var(--accent); margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+
+        /* Inputs e Botões */
+        label { font-size: 11px; color: var(--text-muted); font-weight: bold; margin-bottom: 5px; display: block; }
+        input, select { background: var(--bg-dark); border: 2px solid var(--tile); color: white; padding: 12px; border-radius: 5px; width: 100%; box-sizing: border-box; font-weight: bold; outline: none; margin-bottom: 10px; }
+        input:focus { border-color: var(--tile-hover); }
+        
+        .input-row { display: flex; gap: 5px; }
+        .input-row button { width: 50px; background: var(--tile); color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+
+        #action-btn { background-color: var(--accent); color: #000; font-weight: 800; border: none; padding: 18px; border-radius: 5px; cursor: pointer; width: 100%; font-size: 16px; margin-top: 10px; }
+        #action-btn:hover { filter: brightness(1.1); }
+        .cashout-mode { background-color: #ffae00 !important; color: black !important; }
+
+        .finance-btns { display: flex; gap: 10px; margin-top: 10px; }
+        .dep-btn { background: #00e701; color: black; flex: 1; border: none; padding: 10px; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        .with-btn { background: #2f4553; color: white; flex: 1; border: none; padding: 10px; border-radius: 5px; font-weight: bold; cursor: pointer; }
+
+        /* Jogo */
+        .game-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+        .balance-display { position: absolute; top: 30px; right: 30px; background: var(--bg-sidebar); padding: 12px 25px; border-radius: 30px; font-weight: bold; font-size: 18px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .balance-display span { color: var(--accent); }
+
+        .grid-container { background: #0f1923; padding: 20px; border-radius: 15px; margin-top: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(5, 75px); gap: 12px; }
+        .cell { width: 75px; height: 75px; background-color: var(--tile); border-radius: 8px; border: none; cursor: pointer; font-size: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 0 #1e2c36; transition: transform 0.1s; }
+        .cell:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
+        .cell.safe { background-color: var(--bg-dark); border: 2px solid #ed8a19; cursor: default; box-shadow: none; }
+        .cell.boom { background-color: var(--danger); box-shadow: none; }
+        .cell:disabled { cursor: default; }
+
+        .stats-bar { margin-top: 30px; text-align: center; }
+        #multiplier-display { font-size: 2em; font-weight: bold; opacity: 0.5; }
+
+        /* Modais */
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 100; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .hidden { display: none !important; }
+        .modal { background: #1a242d; padding: 30px; border-radius: 15px; width: 90%; max-width: 400px; text-align: center; border: 1px solid #2f4553; }
+        .modal h2 { margin-top: 0; color: white; }
+        .modal p { color: #b1bad3; font-size: 13px; }
+        .modal button { width: 100%; padding: 12px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-top: 5px; background: #00e701; color: black; }
+        .secondary-btn { background: #2f4553 !important; color: white !important; margin-top: 10px !important; }
+        .close-btn { background: transparent !important; color: #ff4d4d !important; border: 1px solid #ff4d4d !important; margin-top: 15px !important; }
+
+        /* Mobile */
+        @media (max-width: 768px) {
+            body { flex-direction: column; height: auto; overflow-y: scroll; }
+            .sidebar { width: 100%; box-sizing: border-box; }
+            .game-area { min-height: 80vh; padding: 20px 0; }
+            .grid { grid-template-columns: repeat(5, 1fr); gap: 8px; width: 90vw; max-width: 350px; }
+            .cell { width: auto; height: 16vw; max-height: 65px; }
+            .balance-display { position: static; margin-bottom: 20px; }
+        }
+    </style>
 </head>
 <body>
 
@@ -16,7 +87,7 @@
             <input type="password" id="auth-pass" placeholder="Sua Senha">
             <button onclick="login()">ENTRAR</button>
             <button onclick="register()" class="secondary-btn">CRIAR CONTA</button>
-            <p id="auth-msg"></p>
+            <p id="auth-msg" style="color: red; margin-top: 10px;"></p>
         </div>
     </div>
 
@@ -27,11 +98,11 @@
             <input type="number" id="dep-amount" placeholder="Valor (Ex: 20.00)">
             <button onclick="generatePix()">GERAR QR CODE</button>
             
-            <div id="pix-area" class="hidden">
-                <img id="qr-img" src="" style="width: 200px; border-radius: 10px;">
-                <textarea id="copy-paste" rows="3" readonly></textarea>
-                <button onclick="copyPix()">COPIAR CÓDIGO</button>
-                <p class="blink">Aguardando pagamento...</p>
+            <div id="pix-area" class="hidden" style="margin-top: 15px;">
+                <img id="qr-img" src="" style="width: 200px; border-radius: 10px; margin-bottom: 10px;">
+                <textarea id="copy-paste" rows="3" readonly style="font-size: 10px;"></textarea>
+                <button onclick="copyPix()" style="background: #2f4553; color: white;">COPIAR CÓDIGO</button>
+                <p style="color: orange; animation: blink 1s infinite;">Aguardando pagamento...</p>
             </div>
             <button onclick="closeModal('deposit-modal')" class="close-btn">FECHAR</button>
         </div>
@@ -56,7 +127,7 @@
     <div class="sidebar">
         <div class="logo-area">💎 Mines Pro</div>
         <div class="user-info">
-            <small id="user-email-display">...</small>
+            Usuário: <span id="user-email-display">...</span>
         </div>
         
         <div class="control-group">
