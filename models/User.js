@@ -1,12 +1,13 @@
 const mongoose = require('mongoose');
 
 const UserSchema = new mongoose.Schema({
-    // MUDANÇA AQUI: CPF é a nova chave única
-    cpf: { type: String, required: true, unique: true }, 
+    cpf: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     balance: { type: Number, default: 0.00 },
     
-    // Chave PIX para onde ele recebe o saque
+    // NOVO: Controle de Bônus Diário
+    lastDailyBonus: { type: Date, default: null },
+
     pixKey: { type: String, default: '' },
     pixKeyType: { type: String, default: '' },
 
@@ -21,7 +22,7 @@ const UserSchema = new mongoose.Schema({
     },
 
     transactions: [{
-        type: { type: String, enum: ['deposit', 'withdraw'] },
+        type: { type: String, enum: ['deposit', 'withdraw', 'bonus'] }, // Adicionado 'bonus'
         amount: Number,
         status: { type: String, enum: ['pending', 'approved', 'rejected'] },
         mpPaymentId: String,
