@@ -1,7 +1,6 @@
 let currentUser = null;
 let isPlaying = false;
 
-// Elementos
 const gridEl = document.getElementById('grid');
 const balanceEl = document.getElementById('balance');
 const msgEl = document.getElementById('message-display');
@@ -9,7 +8,7 @@ const multEl = document.getElementById('multiplier-display');
 const btn = document.getElementById('action-btn');
 const authMsg = document.getElementById('auth-msg');
 
-// --- AUTENTICAÇÃO (CPF) ---
+// --- AUTENTICAÇÃO ---
 async function login() {
     const cpf = document.getElementById('auth-cpf').value;
     const password = document.getElementById('auth-pass').value;
@@ -54,7 +53,7 @@ async function register() {
         
         if(res.ok) {
             alert("Conta criada com sucesso!");
-            login(); // Auto login
+            login(); 
         } else {
             showAuthError(data.error);
         }
@@ -68,10 +67,11 @@ function showAuthError(msg) {
     setTimeout(() => authMsg.innerText = "", 3000);
 }
 
-// --- FINANCEIRO (PIX) ---
+// --- FINANCEIRO ---
 function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
+// Função OFICIAL (Gerar PIX)
 async function generatePix() {
     const amount = document.getElementById('dep-amount').value;
     if(!amount || amount < 1) return alert("Valor mínimo R$ 1,00");
@@ -88,12 +88,34 @@ async function generatePix() {
         document.getElementById('qr-img').src = `data:image/jpeg;base64,${data.qrCodeBase64}`;
         document.getElementById('copy-paste').value = data.copyPaste;
         
-        // Verifica saldo a cada 5s para ver se caiu
         const checkInterval = setInterval(async () => {
             await updateBalance();
         }, 5000);
     } else {
-        alert(data.error);
+        alert(data.error || "Erro ao gerar Pix (Token MP inválido?)");
+    }
+}
+
+// Função DEBUG (Simular Saldo)
+async function simulateDeposit() {
+    const amount = document.getElementById('dep-amount').value;
+    
+    if(!amount || amount <= 0) return alert("Digite um valor para simular!");
+
+    const res = await fetch('/api/debug/deposit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUser.userId, amount })
+    });
+
+    const data = await res.json();
+
+    if(res.ok) {
+        alert(`✅ SUCESSO! R$ ${amount} adicionados na conta.`);
+        updateBalance();
+        closeModal('deposit-modal');
+    } else {
+        alert("Erro: " + data.error);
     }
 }
 
@@ -123,7 +145,7 @@ async function requestWithdraw() {
     }
 }
 
-// --- LÓGICA DO JOGO ---
+// --- JOGO ---
 function initGame() {
     renderGrid(true);
     btn.onclick = handleAction;
@@ -151,7 +173,6 @@ function renderGrid(disabled) {
 
 async function handleAction() {
     if (!isPlaying) {
-        // COMEÇAR JOGO
         const bet = document.getElementById('betAmount').value;
         const mines = document.getElementById('minesCount').value;
         
@@ -165,7 +186,7 @@ async function handleAction() {
         if(data.error) return alert(data.error);
         
         isPlaying = true;
-        updateBalance(); // Saldo atualiza (descontou aposta)
+        updateBalance();
         renderGrid(false);
         btn.innerText = "RETIRAR (Cashout)";
         btn.classList.add('cashout-mode');
@@ -173,7 +194,6 @@ async function handleAction() {
         multEl.innerText = "1.00x";
         
     } else {
-        // CASHOUT
         const res = await fetch('/api/game/cashout', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -193,7 +213,6 @@ async function playRound(index, cellBtn) {
     const data = await res.json();
     
     if(data.status === 'safe') {
-        // DIAMANTE (Usa imagem se tiver, senão emoji)
         cellBtn.innerHTML = '<img src="diamond.png" style="width:70%; drop-shadow: 0 0 5px #00e701;" onerror="this.style.display=\'none\';this.parentNode.innerText=\'💎\'">';
         cellBtn.classList.add('revealed', 'safe');
         cellBtn.disabled = true;
@@ -202,11 +221,9 @@ async function playRound(index, cellBtn) {
         btn.innerText = `RETIRAR R$ ${data.potentialWin}`;
         
     } else if(data.status === 'boom') {
-        // BOMBA
         cellBtn.innerHTML = '<img src="bomb.png" style="width:70%;" onerror="this.style.display=\'none\';this.parentNode.innerText=\'💣\'">';
         cellBtn.classList.add('boom');
         
-        // Treme a tela
         document.getElementById('grid-container').classList.add('shake-anim');
         setTimeout(()=> document.getElementById('grid-container').classList.remove('shake-anim'), 400);
 
@@ -220,7 +237,6 @@ function finishGame(win, amount, fullGrid) {
     btn.classList.remove('cashout-mode');
     updateBalance();
     
-    // Revela o tabuleiro todo
     const cells = document.querySelectorAll('.cell');
     fullGrid.forEach((type, i) => {
         cells[i].disabled = true;
