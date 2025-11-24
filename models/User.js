@@ -1,15 +1,15 @@
 const mongoose = require('mongoose');
 
 const UserSchema = new mongoose.Schema({
-    // Mudamos de ID aleatório para E-mail único
-    email: { type: String, unique: true, required: true }, 
-    userId: { type: String, required: true }, // Mantemos para uso interno
-    balance: { type: Number, default: 0.00 }, // Começa com zero
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true }, // Senha criptografada
+    balance: { type: Number, default: 0.00 }, // Começa zerado
     
-    // Para onde ele quer sacar
+    // Dados para saque (Chave PIX)
     pixKey: { type: String, default: '' },
-    pixKeyType: { type: String, default: '' }, // CPF, Email, Aleatória
+    pixKeyType: { type: String, default: '' }, // CPF, Email, etc.
 
+    // Estado do jogo (se cair a internet, volta aqui)
     activeGame: {
         grid: [String],
         revealed: [Boolean],
@@ -19,14 +19,15 @@ const UserSchema = new mongoose.Schema({
         diamondsFound: Number,
         isGameOver: { type: Boolean, default: true }
     },
-    
-    // Histórico de Depósitos e Saques
+
+    // Extrato Financeiro
     transactions: [{
-        type: { type: String, enum: ['deposit', 'withdraw'] },
+        type: { type: String, enum: ['deposit', 'withdraw'] }, // Depósito ou Saque
         amount: Number,
         status: { type: String, enum: ['pending', 'approved', 'rejected'] },
         mpPaymentId: String, // ID do Mercado Pago
-        date: { type: Date, default: Date.now }
+        qrCodeBase64: String, // Para mostrar de novo se precisar
+        createdAt: { type: Date, default: Date.now }
     }]
 });
 
