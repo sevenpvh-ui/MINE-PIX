@@ -1,170 +1,203 @@
-// Gerenciamento de Usuário (Simulação)
-let userId = localStorage.getItem('userId');
-if (!userId) {
-    userId = 'user_' + Math.random().toString(36).substr(2, 9);
-    localStorage.setItem('userId', userId);
-}
-
-// Elementos do DOM
-const gridEl = document.getElementById('grid');
-const actionBtn = document.getElementById('action-btn');
-const balanceEl = document.getElementById('balance');
-const multEl = document.getElementById('multiplier-display');
-const msgEl = document.getElementById('message-display');
-const gridContainer = document.getElementById('grid-container');
-
+let currentUser = null; // Guarda ID e Email
 let isPlaying = false;
 
-// Inicialização
-init();
+// ELEMENTOS
+const gridEl = document.getElementById('grid');
+const balanceEl = document.getElementById('balance');
+const msgEl = document.getElementById('message-display');
+const btn = document.getElementById('action-btn');
 
-function init() {
-    renderGrid(true); // Grid bloqueado
-    updateBalance();
-    
-    // Evento do botão principal
-    actionBtn.onclick = handleAction;
-}
-
-// Funções de Interface
-function renderGrid(disabled = false) {
-    gridEl.innerHTML = '';
-    for (let i = 0; i < 25; i++) {
-        const btn = document.createElement('button');
-        btn.className = 'cell';
-        if (!disabled) {
-            btn.onclick = () => playRound(i, btn);
-        } else {
-            btn.disabled = true;
-        }
-        gridEl.appendChild(btn);
+// --- AUTENTICAÇÃO ---
+async function login() {
+    const email = document.getElementById('auth-email').value;
+    const password = document.getElementById('auth-pass').value;
+    const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if(res.ok) {
+        currentUser = data;
+        document.getElementById('auth-screen').classList.add('hidden');
+        document.getElementById('user-email-display').innerText = data.email;
+        updateBalance();
+        initGame();
+    } else {
+        document.getElementById('auth-msg').innerText = data.error;
     }
 }
 
-function adjustBet(factor) {
-    const input = document.getElementById('betAmount');
-    let val = parseFloat(input.value);
-    input.value = (val * factor).toFixed(2);
+async function register() {
+    const email = document.getElementById('auth-email').value;
+    const password = document.getElementById('auth-pass').value;
+    const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if(res.ok) {
+        login(); // Auto login
+    } else {
+        document.getElementById('auth-msg').innerText = data.error;
+    }
 }
 
-// Funções de API
+// --- FINANCEIRO ---
+function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+async function generatePix() {
+    const amount = document.getElementById('dep-amount').value;
+    const res = await fetch('/api/payment/deposit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUser.userId, amount })
+    });
+    const data = await res.json();
+    
+    if(res.ok) {
+        document.getElementById('pix-area').classList.remove('hidden');
+        document.getElementById('qr-img').src = `data:image/jpeg;base64,${data.qrCodeBase64}`;
+        document.getElementById('copy-paste').value = data.copyPaste;
+        
+        // Loop simples para checar saldo a cada 5 segundos
+        const checkInterval = setInterval(async () => {
+            await updateBalance();
+            // Se o saldo aumentou (lógica simplificada), fecha o modal
+            // Ideal seria verificar status do PIX especificamente
+        }, 5000);
+    } else {
+        alert(data.error);
+    }
+}
+
+function copyPix() {
+    const copyText = document.getElementById("copy-paste");
+    copyText.select();
+    document.execCommand("copy");
+    alert("Código PIX Copiado!");
+}
+
+async function requestWithdraw() {
+    const amount = document.getElementById('with-amount').value;
+    const pixKey = document.getElementById('pix-key').value;
+    const pixKeyType = document.getElementById('pix-type').value;
+
+    const res = await fetch('/api/payment/withdraw', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUser.userId, amount, pixKey, pixKeyType })
+    });
+    const data = await res.json();
+    alert(data.message || data.error);
+    if(res.ok) {
+        closeModal('withdraw-modal');
+        updateBalance();
+    }
+}
+
+// --- JOGO ---
+function initGame() {
+    renderGrid(true);
+    btn.onclick = handleAction;
+}
+
 async function updateBalance() {
-    try {
-        const res = await fetch(`/api/me/${userId}`);
-        const data = await res.json();
-        balanceEl.innerText = parseFloat(data.balance).toFixed(2);
-    } catch (e) {
-        console.error("Erro ao buscar saldo");
+    if(!currentUser) return;
+    const res = await fetch(`/api/me/${currentUser.userId}`);
+    const data = await res.json();
+    balanceEl.innerText = parseFloat(data.balance).toFixed(2);
+}
+
+function renderGrid(disabled) {
+    gridEl.innerHTML = '';
+    for(let i=0; i<25; i++) {
+        const b = document.createElement('button');
+        b.className = 'cell';
+        b.disabled = disabled;
+        if(!disabled) b.onclick = () => playRound(i, b);
+        gridEl.appendChild(b);
     }
 }
 
 async function handleAction() {
     if (!isPlaying) {
-        // --- INICIAR JOGO ---
+        // INICIAR
         const bet = document.getElementById('betAmount').value;
         const mines = document.getElementById('minesCount').value;
-
-        const res = await fetch('/api/start', {
+        
+        const res = await fetch('/api/game/start', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId, betAmount: bet, minesCount: mines })
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({userId: currentUser.userId, betAmount: bet, minesCount: mines})
         });
-
         const data = await res.json();
         
-        if (res.status !== 200) {
-            msgEl.innerText = data.error;
-            msgEl.style.color = 'red';
-            return;
-        }
-
-        // Sucesso no início
+        if(data.error) return alert(data.error);
+        
         isPlaying = true;
-        actionBtn.innerText = "RETIRAR (Cashout)";
-        actionBtn.classList.add('cashout-mode');
-        msgEl.innerText = "Boa sorte!";
-        msgEl.style.color = '#b1bad3';
-        multEl.style.opacity = '1';
-        multEl.innerText = '1.00x';
-        
-        renderGrid(false); // Libera o grid
         updateBalance();
-
+        renderGrid(false);
+        btn.innerText = "RETIRAR";
+        btn.classList.add('cashout-mode');
+        
     } else {
-        // --- FAZER CASHOUT ---
-        const res = await fetch('/api/cashout', {
+        // CASHOUT
+        const res = await fetch('/api/game/cashout', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId })
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({userId: currentUser.userId})
         });
         const data = await res.json();
-        
-        revealBoard(data.grid);
-        finishGame(true, data.winAmount);
+        finishGame(true, data.winAmount, data.grid);
     }
 }
 
-async function playRound(index, btn) {
-    if (!isPlaying) return;
-
-    const res = await fetch('/api/play', {
+async function playRound(index, cellBtn) {
+    const res = await fetch('/api/game/play', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, index })
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({userId: currentUser.userId, index})
     });
     const data = await res.json();
-
-    if (data.status === 'safe') {
-        // ACERTOU
-        btn.classList.add('revealed', 'safe');
-        btn.innerHTML = '💎';
-        btn.disabled = true;
-        
-        multEl.innerText = `${data.multiplier}x`;
-        actionBtn.innerText = `RETIRAR R$ ${data.potentialWin}`;
-        
-    } else if (data.status === 'boom') {
-        // PERDEU
-        btn.classList.add('boom');
-        btn.innerHTML = '💣';
-        
-        // Efeito de tremor
-        gridContainer.classList.add('shake-anim');
-        setTimeout(() => gridContainer.classList.remove('shake-anim'), 500);
-
-        revealBoard(data.grid);
-        finishGame(false);
+    
+    if(data.status === 'safe') {
+        cellBtn.innerHTML = '<img src="assets/diamond.png" style="width:70%">';
+        cellBtn.classList.add('revealed', 'safe');
+        cellBtn.disabled = true;
+        btn.innerText = `RETIRAR R$ ${data.potentialWin}`;
+    } else if(data.status === 'boom') {
+        cellBtn.innerHTML = '<img src="assets/bomb.png" style="width:70%">';
+        cellBtn.classList.add('boom');
+        finishGame(false, 0, data.grid);
     }
 }
 
-function revealBoard(fullGrid) {
-    const buttons = document.querySelectorAll('.cell');
-    fullGrid.forEach((type, idx) => {
-        const btn = buttons[idx];
-        btn.disabled = true;
-        btn.classList.add('revealed');
-        if (type === 'mine') {
-            btn.innerHTML = '💣';
-            if (!btn.classList.contains('boom')) btn.style.opacity = '0.5';
-        } else if (type === 'diamond') {
-            btn.innerHTML = '💎';
-            if (!btn.classList.contains('safe')) btn.style.opacity = '0.3';
+function finishGame(win, amount, fullGrid) {
+    isPlaying = false;
+    btn.innerText = "COMEÇAR";
+    btn.classList.remove('cashout-mode');
+    updateBalance();
+    
+    // Revelar tudo
+    const cells = document.querySelectorAll('.cell');
+    fullGrid.forEach((type, i) => {
+        cells[i].disabled = true;
+        cells[i].classList.add('revealed');
+        if(type === 'mine') cells[i].innerHTML = '<img src="assets/bomb.png" style="width:70%">';
+        if(type === 'diamond') {
+            if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="assets/diamond.png" style="width:70%; opacity: 0.5">';
         }
     });
-}
 
-function finishGame(win, amount) {
-    isPlaying = false;
-    actionBtn.classList.remove('cashout-mode');
-    actionBtn.innerText = "COMEÇAR O JOGO";
-    multEl.style.opacity = '0.5';
-    updateBalance();
-
-    if (win) {
-        msgEl.innerHTML = `VITÓRIA! <span style="color:#00e701">R$ ${amount}</span>`;
-        msgEl.style.color = '#fff';
+    if(win) {
+        msgEl.innerHTML = `<span style="color:#00e701">Ganhou R$ ${amount}</span>`;
+        confetti();
     } else {
-        msgEl.innerText = "VOCÊ PERDEU!";
-        msgEl.style.color = '#ff4d4d';
+        msgEl.innerHTML = `<span style="color:red">Boooocê perdeu!</span>`;
     }
 }
+
+function adjustBet(m) { document.getElementById('betAmount').value *= m; }
