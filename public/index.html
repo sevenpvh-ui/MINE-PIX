@@ -3,117 +3,257 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mines Pix - Real Money</title>
+    <title>Mines Pix - O Original</title>
     <link rel="manifest" href="manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     
     <style>
-        :root { --bg-dark: #0f1923; --bg-sidebar: #1a242d; --accent: #00e701; --danger: #ff4d4d; --tile: #2f4553; --tile-hover: #557086; --text-muted: #b1bad3; }
-        body { margin: 0; background-color: var(--bg-dark); color: white; font-family: 'Segoe UI', sans-serif; display: flex; height: 100vh; overflow: hidden; }
-        
-        /* Sidebar */
-        .sidebar { width: 320px; background-color: var(--bg-sidebar); padding: 25px; display: flex; flex-direction: column; gap: 15px; box-shadow: 2px 0 10px rgba(0,0,0,0.3); z-index: 10; overflow-y: auto; }
-        .logo-area { font-size: 24px; font-weight: bold; margin-bottom: 10px; color: white; }
-        .user-info { background: #0f1923; padding: 15px; border-radius: 10px; border: 1px solid #2f4553; margin-bottom: 10px; }
-        label { font-size: 11px; color: var(--text-muted); font-weight: bold; margin-bottom: 5px; display: block; }
-        input, select { background: var(--bg-dark); border: 2px solid var(--tile); color: white; padding: 12px; border-radius: 5px; width: 100%; box-sizing: border-box; font-weight: bold; outline: none; margin-bottom: 10px; }
-        .input-row { display: flex; gap: 5px; }
-        .input-row button { width: 50px; background: var(--tile); color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        #action-btn { background-color: var(--accent); color: #000; font-weight: 800; border: none; padding: 18px; border-radius: 5px; cursor: pointer; width: 100%; font-size: 16px; margin-top: 10px; }
-        .cashout-mode { background-color: #ffae00 !important; color: black !important; box-shadow: 0 0 15px rgba(255, 174, 0, 0.4); }
-        .bonus-btn { background: linear-gradient(45deg, #ff0055, #ff00aa); color: white; border: none; padding: 12px; border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 5px; display: flex; justify-content: center; align-items: center; gap: 8px; }
-        .affiliate-btn { background: #2f4553; border: 1px solid #00e701; color: #00e701; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; display: flex; justify-content: center; gap: 5px; width: 100%; margin-top: 5px;}
-        .ranking-btn { background: #2f4553; border: 1px solid #ffae00; color: #ffae00; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; display: flex; justify-content: center; gap: 5px; width: 100%; margin-top: 5px;}
-        .finance-btns { display: flex; gap: 10px; margin-top: 10px; }
-        .dep-btn, .with-btn { background: #2f4553; color: white; flex: 1; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; }
-        .dep-btn { background: #00e701; color: black; }
+        :root { 
+            --bg-dark: #0f1923; 
+            --bg-sidebar: #1a242d; 
+            --card-bg: #212d38;
+            --accent: #00e701; /* Verde Mines */
+            --accent-hover: #00c901;
+            --danger: #ff4d4d; 
+            --text-muted: #b1bad3; 
+            --white: #ffffff;
+        }
 
-        /* Game Area */
-        .game-area { flex: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; }
-        .game-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; width: 100%; box-sizing: border-box; min-height: 80vh; }
-        .balance-display { position: absolute; top: 30px; right: 30px; background: var(--bg-sidebar); padding: 12px 25px; border-radius: 30px; font-weight: bold; font-size: 18px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: flex; gap: 5px;}
-        .balance-display span { color: var(--accent); }
-        .grid-container { background: #0f1923; padding: 20px; border-radius: 15px; margin-top: 20px; position: relative; }
+        * { box-sizing: border-box; }
+
+        body { 
+            margin: 0; 
+            background-color: var(--bg-dark); 
+            color: var(--white); 
+            font-family: 'Inter', sans-serif; /* Fonte nova */
+            display: flex; 
+            height: 100vh; 
+            overflow: hidden; 
+        }
+        
+        /* --- SIDEBAR ESTILO BLAZE --- */
+        .sidebar { 
+            width: 280px; 
+            background-color: var(--bg-sidebar); 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px; 
+            border-right: 1px solid rgba(255,255,255,0.05);
+            z-index: 10; 
+            overflow-y: auto; 
+        }
+
+        .logo-area { 
+            font-size: 26px; 
+            font-weight: 900; 
+            color: var(--white); 
+            margin-bottom: 20px; 
+            letter-spacing: -1px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* CARD DE USUÁRIO */
+        .user-card {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .user-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 13px; color: var(--text-muted); }
+        .user-card-name { font-weight: bold; color: var(--white); }
+        .btn-extrato { background: rgba(255,255,255,0.1); border: none; color: var(--text-muted); padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 10px; font-weight: bold; transition: 0.2s;}
+        .btn-extrato:hover { background: rgba(255,255,255,0.2); color: white; }
+
+        /* BOTÕES MODERNOS */
+        .btn-main {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 800;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .btn-primary { background-color: var(--accent); color: #000; }
+        .btn-primary:hover { background-color: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0, 231, 1, 0.3); }
+        
+        .btn-bonus { background: linear-gradient(90deg, #ff0055, #ff0099); color: white; box-shadow: 0 5px 15px rgba(255, 0, 85, 0.3); margin-bottom: 10px;}
+        .btn-bonus:hover { filter: brightness(1.1); transform: translateY(-2px); }
+
+        .btn-outline { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: var(--text-muted); }
+        .btn-outline:hover { border-color: var(--white); color: var(--white); }
+
+        /* INPUTS ESTILO BLAZE */
+        .input-group { margin-bottom: 15px; }
+        .input-group label { font-size: 11px; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; display: block; text-transform: uppercase; }
+        
+        .input-wrapper { display: flex; background: var(--bg-dark); border-radius: 8px; padding: 5px; border: 1px solid rgba(255,255,255,0.1); transition: 0.2s; }
+        .input-wrapper:focus-within { border-color: var(--accent); }
+        
+        .input-wrapper input, .input-wrapper select { 
+            background: transparent; 
+            border: none; 
+            color: white; 
+            padding: 10px; 
+            width: 100%; 
+            font-weight: 600; 
+            outline: none; 
+        }
+        
+        .input-actions { display: flex; gap: 5px; }
+        .input-actions button { background: var(--card-bg); border: none; color: var(--text-muted); width: 40px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .input-actions button:hover { background: rgba(255,255,255,0.1); color: white; }
+
+        .finance-row { display: flex; gap: 10px; margin-top: auto; }
+
+        /* --- ÁREA DO JOGO --- */
+        .game-area { flex: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; background: radial-gradient(circle at center, #1b2733 0%, #0f1923 100%); }
+        .game-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; width: 100%; max-width: 800px; margin: 0 auto; }
+
+        .balance-badge { 
+            background: var(--card-bg); 
+            padding: 10px 30px; 
+            border-radius: 50px; 
+            font-weight: bold; 
+            font-size: 24px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
+            border: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .balance-badge span { color: var(--accent); }
+
+        .grid-container { 
+            background: var(--card-bg); 
+            padding: 25px; 
+            border-radius: 24px; 
+            margin-top: 30px; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.4); 
+            border: 1px solid rgba(255,255,255,0.05);
+        }
         .grid { display: grid; grid-template-columns: repeat(5, 75px); gap: 12px; }
-        .cell { width: 75px; height: 75px; background-color: var(--tile); border-radius: 8px; border: none; cursor: pointer; font-size: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 0 #1e2c36; transition: all 0.1s; }
+        
+        .cell { 
+            width: 75px; height: 75px; 
+            background-color: #2f4553; 
+            border-radius: 12px; /* Mais arredondado */
+            border: none; 
+            cursor: pointer; 
+            font-size: 30px; 
+            display: flex; align-items: center; justify-content: center; 
+            box-shadow: 0 4px 0 #1b2733; 
+            transition: all 0.1s; 
+        }
+        .cell:hover:not(:disabled) { background-color: #3e5664; transform: translateY(-2px); }
         .cell:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
-        .cell.safe { background-color: var(--bg-dark); border: 2px solid #ed8a19; cursor: default; box-shadow: none; animation: popIn 0.3s; }
+        .cell.safe { background-color: #0f1923; border: 2px solid #ed8a19; cursor: default; box-shadow: none; animation: popIn 0.3s; }
         .cell.boom { background-color: var(--danger); box-shadow: none; }
 
-        /* --- NOVO VISUAL DO MULTIPLICADOR (PREMIUM) --- */
+        /* Multiplicador Neon */
         .stats-bar { 
-            margin-top: 25px; 
-            text-align: center; 
-            background: linear-gradient(145deg, #1a242d, #161f26); 
+            margin-top: 30px; text-align: center; 
+            background: rgba(0,0,0,0.3); 
             padding: 15px 40px; 
-            border-radius: 20px; 
-            border: 1px solid #2f4553;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
-            position: relative;
-            display: inline-block;
-            min-width: 220px;
-            transform: translateY(0);
-            transition: all 0.3s;
+            border-radius: 16px; 
+            border: 1px solid rgba(255,255,255,0.05);
         }
         #multiplier-display { 
-            font-size: 3.5em; 
-            font-weight: 900; 
-            color: #ffffff;
-            font-family: 'Segoe UI', sans-serif;
-            text-shadow: 0 0 10px rgba(0, 231, 1, 0.8), 0 0 20px rgba(0, 231, 1, 0.4);
-            display: block;
-            line-height: 1;
-            margin-bottom: 5px;
-        }
-        #message-display { 
-            color: #b1bad3; 
-            font-size: 12px; 
-            text-transform: uppercase; 
-            letter-spacing: 2px; 
-            font-weight: bold;
-            opacity: 0.8;
-        }
-        @keyframes pulseGreen {
-            0% { transform: scale(1); text-shadow: 0 0 10px rgba(0, 231, 1, 0.8); }
-            50% { transform: scale(1.1); text-shadow: 0 0 25px rgba(0, 231, 1, 1), 0 0 5px #fff; color: #fff; }
-            100% { transform: scale(1); text-shadow: 0 0 10px rgba(0, 231, 1, 0.8); }
+            font-size: 3em; font-weight: 900; color: white; 
+            text-shadow: 0 0 15px rgba(0, 231, 1, 0.6); 
+            display: block; line-height: 1; margin-bottom: 5px;
         }
         .pulse-effect { animation: pulseGreen 0.3s ease-out; }
 
         /* Footer & Feed */
-        .footer { background-color: #0b1219; width: 100%; padding: 40px 20px; box-sizing: border-box; border-top: 1px solid #2f4553; text-align: center; font-size: 12px; color: #55657e; margin-top: 20px; }
-        .live-feed { width: 100%; background: rgba(0,0,0,0.8); height: 30px; display: flex; align-items: center; overflow: hidden; font-size: 11px; color: #b1bad3; border-top: 1px solid #333; margin-top: auto; }
+        .footer { background-color: #0b1219; padding: 40px 20px; text-align: center; font-size: 12px; color: #55657e; margin-top: auto; border-top: 1px solid rgba(255,255,255,0.05); }
+        .footer-links span { margin: 0 10px; cursor: pointer; transition: 0.2s; }
+        .footer-links span:hover { color: white; }
+        .live-feed { width: 100%; background: rgba(0,0,0,0.8); height: 30px; display: flex; align-items: center; overflow: hidden; font-size: 11px; color: #b1bad3; border-top: 1px solid #333; }
         .feed-item { display: flex; gap: 10px; padding: 0 20px; white-space: nowrap; animation: slideLeft 20s linear infinite; }
-        .feed-money { color: #00e701; font-weight: bold; }
 
-        /* Modais & Toasts */
+        /* --- MODAL DE BOAS VINDAS (ESTILO BLAZE) --- */
+        .welcome-modal-content {
+            background: linear-gradient(135deg, #1a242d 0%, #0f1923 100%);
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            width: 90%;
+            max-width: 450px;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+            position: relative;
+            overflow: hidden;
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        /* Efeito de brilho no fundo do modal */
+        .welcome-modal-content::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(0,231,1,0.1) 0%, transparent 60%);
+            z-index: 0;
+            animation: rotate 10s linear infinite;
+        }
+        
+        .welcome-icon { font-size: 60px; margin-bottom: 20px; position: relative; z-index: 1; }
+        .welcome-title { font-size: 28px; font-weight: 900; color: white; margin-bottom: 10px; position: relative; z-index: 1; }
+        .welcome-text { color: #b1bad3; font-size: 14px; margin-bottom: 30px; line-height: 1.5; position: relative; z-index: 1; }
+        
+        .welcome-btn {
+            width: 100%;
+            padding: 16px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 800;
+            font-size: 16px;
+            cursor: pointer;
+            position: relative; z-index: 1;
+            background: var(--accent);
+            color: #000;
+            text-transform: uppercase;
+            transition: 0.2s;
+        }
+        .welcome-btn:hover { transform: scale(1.02); box-shadow: 0 0 20px rgba(0,231,1,0.4); }
+
+        /* Modais Padrão */
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 100; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
+        .hidden { display: none !important; }
+        .modal { background: var(--card-bg); padding: 30px; border-radius: 15px; width: 90%; max-width: 450px; text-align: center; border: 1px solid rgba(255,255,255,0.1); animation: popIn 0.3s; }
+        .modal h2 { margin-top: 0; color: white; margin-bottom: 20px; font-size: 22px; }
+        .modal input { width: 100%; margin-bottom: 10px; background: var(--bg-dark); border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 8px; color: white; outline: none;}
+        .modal input:focus { border-color: var(--accent); }
+        
+        /* Toasts */
         .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
         .toast { background: #1a242d; color: white; padding: 15px 20px; border-radius: 8px; display: flex; align-items: center; gap: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); animation: slideIn 0.3s ease-out; min-width: 250px; border-left: 4px solid #00e701; }
         .toast.error { border-left-color: #ff4d4d; }
-        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 100; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
-        .hidden { display: none !important; }
-        .modal { background: #1a242d; padding: 30px; border-radius: 15px; width: 90%; max-width: 450px; text-align: center; border: 1px solid #2f4553; animation: popIn 0.3s; }
-        .modal button { padding: 12px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; background: #00e701; color: black; width: 100%; margin-top: 10px;}
-        .close-btn { background: transparent !important; color: #ff4d4d !important; border: 1px solid #ff4d4d !important; }
-        .affiliate-card { background: #0f1923; border: 1px solid #00e701; padding: 15px; border-radius: 10px; margin-bottom: 15px; }
-        .affiliate-val { font-size: 24px; color: #00e701; font-weight: bold; }
 
-        @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-        @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-5px);} 75% {transform: translateX(5px);} }
-        @keyframes slideLeft { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+        /* Animações */
+        @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes pulseGreen { 0% { transform: scale(1); text-shadow: 0 0 15px rgba(0, 231, 1, 0.6); } 50% { transform: scale(1.1); text-shadow: 0 0 30px rgba(0, 231, 1, 1); } 100% { transform: scale(1); } }
+        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes slideLeft { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
         .shake-anim { animation: shake 0.4s; border: 1px solid var(--danger); }
-        
+        @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-5px);} 75% {transform: translateX(5px);} }
+
         @media (max-width: 768px) {
             body { flex-direction: column; height: auto; overflow-y: scroll; }
-            .sidebar { width: 100%; box-sizing: border-box; padding: 20px; border-bottom: 1px solid #333; }
+            .sidebar { width: 100%; padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); }
             .game-area { height: auto; display: block; }
-            .grid { grid-template-columns: repeat(5, 1fr); gap: 8px; width: 90vw; max-width: 350px; }
-            .cell { width: auto; height: 16vw; max-height: 65px; font-size: 24px;}
-            .balance-display { position: static; margin-bottom: 20px; justify-content: center; margin-top: 20px;}
+            .grid { grid-template-columns: repeat(5, 1fr); gap: 8px; width: 100%; max-width: 350px; }
+            .cell { width: auto; height: 15vw; max-height: 65px; }
             .live-feed { position: relative; }
-            .toast-container { top: 10px; right: 10px; left: 10px; }
         }
     </style>
 </head>
@@ -121,47 +261,62 @@
 
     <div class="toast-container" id="toast-container"></div>
 
-    <div id="terms-modal" class="overlay hidden"><div class="modal" style="max-width:600px;text-align:left"><h2>📜 Termos</h2><p style="color:#b1bad3">1. +18.<br>2. Jogo de azar envolve risco.</p><button onclick="closeModal('terms-modal')" class="close-btn">FECHAR</button></div></div>
-    <div id="privacy-modal" class="overlay hidden"><div class="modal"><h2>🔒 Privacidade</h2><p style="color:#b1bad3">Dados seguros.</p><button onclick="closeModal('privacy-modal')" class="close-btn">FECHAR</button></div></div>
-    <div id="responsible-modal" class="overlay hidden"><div class="modal"><h2>🛡️ Jogo Responsável</h2><p style="color:#b1bad3">Jogue com moderação.</p><button onclick="closeModal('responsible-modal')" class="close-btn">FECHAR</button></div></div>
-    <div id="support-modal" class="overlay hidden"><div class="modal"><h2>🎧 Suporte</h2><p style="color:#b1bad3">suporte@minespix.com</p><button onclick="closeModal('support-modal')" class="close-btn">FECHAR</button></div></div>
-
-    <div id="ranking-modal" class="overlay hidden">
-        <div class="modal" style="max-width: 400px;">
-            <h2>🏆 Top Ganhadores</h2>
-            <p style="color:#b1bad3; font-size:12px;">Os maiores saldos da plataforma hoje.</p>
-            <div style="margin: 20px 0; max-height: 250px; overflow-y: auto;">
-                <table style="width:100%; text-align:left; font-size:13px; border-collapse: collapse;">
-                    <thead><tr style="color:#b1bad3; border-bottom:1px solid #333;"><th>Pos</th><th>Jogador</th><th>Saldo</th></tr></thead>
-                    <tbody id="ranking-list"></tbody>
-                </table>
+    <div id="welcome-modal" class="overlay hidden">
+        <div class="welcome-modal-content">
+            <div class="welcome-icon">💎</div>
+            <div class="welcome-title">Bem-vindo ao Mines Pix</div>
+            <div class="welcome-text">
+                O jogo oficial que mais paga no Brasil.<br>
+                Cadastre-se agora e ganhe acesso exclusivo ao multiplicador 100x.
             </div>
-            <button onclick="closeModal('ranking-modal')" class="close-btn">FECHAR</button>
+            <button class="welcome-btn" onclick="showRegisterFromWelcome()">CRIAR CONTA GRÁTIS</button>
+            <div style="margin-top: 15px;">
+                <span onclick="showLoginFromWelcome()" style="color: #b1bad3; cursor: pointer; font-size: 13px;">Já tenho conta</span>
+            </div>
         </div>
     </div>
 
+    <div id="terms-modal" class="overlay hidden"><div class="modal"><h2>📜 Termos</h2><p style="color:#b1bad3">1. +18.<br>2. Risco financeiro.</p><button class="btn-main btn-primary" onclick="closeModal('terms-modal')">FECHAR</button></div></div>
+    <div id="privacy-modal" class="overlay hidden"><div class="modal"><h2>🔒 Privacidade</h2><p style="color:#b1bad3">Dados seguros e criptografados.</p><button class="btn-main btn-primary" onclick="closeModal('privacy-modal')">FECHAR</button></div></div>
+    <div id="responsible-modal" class="overlay hidden"><div class="modal"><h2>🛡️ Jogo Responsável</h2><p style="color:#b1bad3">Jogue com moderação.</p><button class="btn-main btn-primary" onclick="closeModal('responsible-modal')">FECHAR</button></div></div>
+    <div id="support-modal" class="overlay hidden"><div class="modal"><h2>🎧 Suporte</h2><p style="color:#b1bad3">suporte@minespix.com</p><button class="btn-main btn-primary" onclick="closeModal('support-modal')">FECHAR</button></div></div>
+
+    <div id="ranking-modal" class="overlay hidden"><div class="modal"><h2>🏆 Ranking</h2><div style="max-height:200px;overflow:auto"><table style="width:100%;text-align:left;color:#b1bad3"><thead><tr><th>#</th><th>Nome</th><th>Saldo</th></tr></thead><tbody id="ranking-list"></tbody></table></div><button class="btn-main btn-primary" onclick="closeModal('ranking-modal')">FECHAR</button></div></div>
+    
     <div id="affiliate-modal" class="overlay hidden">
         <div class="modal">
             <h2>🤝 Indique e Ganhe</h2>
-            <p style="color:#b1bad3">Ganhe 10% de comissão vitalícia!</p>
-            <div class="affiliate-card">
-                <div style="color:#b1bad3;font-size:12px;">SEUS GANHOS</div>
-                <div class="affiliate-val" id="aff-earnings">R$ 0.00</div>
-                <div style="color:#b1bad3;font-size:12px;margin-top:5px">Amigos: <span id="aff-count" style="color:white">0</span></div>
+            <p style="color:#b1bad3">Ganhe 10% de comissão vitalícia.</p>
+            <div class="user-card" style="margin-bottom:15px; text-align:center">
+                <div style="color:#b1bad3;font-size:11px;margin-bottom:5px">GANHOS TOTAIS</div>
+                <div class="affiliate-val" style="font-size:28px;color:var(--accent);font-weight:900" id="aff-earnings">R$ 0.00</div>
             </div>
-            <label style="text-align:left">Seu Link</label>
-            <div style="display:flex;gap:5px;margin-bottom:20px"><input type="text" id="aff-link" readonly style="margin:0;background:#0b1219"><button onclick="copyAffiliateLink()" style="width:80px;background:#2f4553;margin:0">COPIAR</button></div>
-            <button onclick="closeModal('affiliate-modal')" class="close-btn">FECHAR</button>
+            <input type="text" id="aff-link" readonly style="background:#0b1219; text-align:center; font-size:12px; margin-bottom:10px;">
+            <button class="btn-main btn-primary" onclick="copyAffiliateLink()">COPIAR LINK</button>
+            <button class="btn-main btn-outline" style="margin-top:10px" onclick="closeModal('affiliate-modal')">FECHAR</button>
         </div>
     </div>
 
-    <div id="auth-screen" class="overlay">
+    <div id="auth-screen" class="overlay hidden">
         <div class="modal">
             <h2>🔐 Entrar</h2>
-            <input type="tel" id="login-cpf" placeholder="CPF" maxlength="14">
-            <input type="password" id="login-pass" placeholder="Senha">
-            <button onclick="login()">ENTRAR</button>
-            <div style="margin-top:15px;display:flex;justify-content:space-between;font-size:13px"><span onclick="showRecover()" style="color:#b1bad3;cursor:pointer">Esqueci a senha</span><span onclick="showRegister()" style="color:#00e701;cursor:pointer;font-weight:bold">Criar conta</span></div>
+            <div class="input-group"><label>CPF</label><input type="tel" id="login-cpf" placeholder="000.000.000-00" maxlength="14"></div>
+            <div class="input-group"><label>Senha</label><input type="password" id="login-pass" placeholder="••••••"></div>
+            <button class="btn-main btn-primary" onclick="login()">ENTRAR</button>
+            <div style="margin-top:15px;display:flex;justify-content:space-between;font-size:12px"><span onclick="showRecover()" style="cursor:pointer;color:var(--text-muted)">Esqueci a senha</span><span onclick="showRegister()" style="cursor:pointer;color:var(--accent);font-weight:bold">Criar conta</span></div>
+        </div>
+    </div>
+
+    <div id="register-modal" class="overlay hidden">
+        <div class="modal">
+            <h2>🚀 Criar Conta</h2>
+            <div class="input-group"><label>Nome Completo</label><input type="text" id="reg-name"></div>
+            <div class="input-group"><label>CPF</label><input type="tel" id="reg-cpf" maxlength="14"></div>
+            <div class="input-group"><label>Telefone</label><input type="tel" id="reg-phone"></div>
+            <div class="input-group"><label>Senha</label><input type="password" id="reg-pass"></div>
+            <input type="hidden" id="reg-ref">
+            <button class="btn-main btn-primary" onclick="register()">CADASTRAR</button>
+            <div style="margin-top:15px"><span onclick="showLogin()" style="cursor:pointer;color:var(--text-muted);font-size:12px">Já tenho conta</span></div>
         </div>
     </div>
 
@@ -172,64 +327,97 @@
             <input type="text" id="rec-name" placeholder="Nome">
             <input type="tel" id="rec-phone" placeholder="Telefone">
             <input type="password" id="rec-newpass" placeholder="Nova Senha">
-            <button onclick="resetPassword()" style="background:#00a8ff">ALTERAR</button>
-            <div style="margin-top:15px"><span onclick="showLogin()" style="color:#b1bad3;cursor:pointer">Voltar</span></div>
+            <button class="btn-main btn-primary" onclick="resetPassword()">ALTERAR SENHA</button>
+            <div style="margin-top:15px"><span onclick="showLogin()" style="cursor:pointer;color:var(--text-muted)">Voltar</span></div>
         </div>
     </div>
 
-    <div id="register-modal" class="overlay hidden">
-        <div class="modal">
-            <h2>🚀 Criar Conta</h2>
-            <input type="text" id="reg-name" placeholder="Nome Completo">
-            <input type="tel" id="reg-cpf" placeholder="CPF" maxlength="14">
-            <input type="tel" id="reg-phone" placeholder="Telefone">
-            <input type="password" id="reg-pass" placeholder="Senha">
-            <input type="text" id="reg-ref" placeholder="Código Indicação (Opcional)">
-            <button onclick="register()" style="background:linear-gradient(45deg,#00e701,#00b300)">CADASTRAR</button>
-            <div style="margin-top:15px"><span onclick="showLogin()" style="color:#b1bad3;cursor:pointer;font-size:12px">Voltar</span></div>
-        </div>
-    </div>
-
-    <div id="deposit-modal" class="overlay hidden"><div class="modal"><h2>💰 Depositar</h2><input type="number" id="dep-amount" placeholder="Valor (Ex: 20.00)"><button onclick="generatePix()">GERAR PIX</button><button onclick="simulateDeposit()" style="background:#00a8ff;margin-top:10px">⚡ SIMULAR</button><div id="pix-area" class="hidden" style="margin-top:15px"><img id="qr-img" src="" style="width:200px;border:2px solid white"><textarea id="copy-paste" rows="3" readonly></textarea><button onclick="copyPix()" style="background:#2f4553">COPIAR</button></div><button onclick="closeModal('deposit-modal')" class="close-btn">FECHAR</button></div></div>
-    <div id="withdraw-modal" class="overlay hidden"><div class="modal"><h2>💸 Sacar</h2><input type="number" id="with-amount" placeholder="Valor"><select id="pix-type"><option value="cpf">CPF</option><option value="email">Email</option></select><input type="text" id="pix-key" placeholder="Chave"><button onclick="requestWithdraw()">SOLICITAR</button><button onclick="closeModal('withdraw-modal')" class="close-btn">FECHAR</button></div></div>
-    <div id="profile-modal" class="overlay hidden"><div class="modal" style="max-width:500px"><h2>📜 Extrato</h2><div style="max-height:300px;overflow-y:auto"><table style="width:100%;font-size:12px;text-align:left;color:#b1bad3"><thead><tr><th>Tipo</th><th>Valor</th><th>Status</th><th>Data</th></tr></thead><tbody id="transaction-list"></tbody></table></div><button onclick="closeModal('profile-modal')" class="close-btn">FECHAR</button></div></div>
+    <div id="deposit-modal" class="overlay hidden"><div class="modal"><h2>💰 Depositar</h2><input type="number" id="dep-amount" placeholder="Valor (Ex: 20.00)"><button class="btn-main btn-primary" onclick="generatePix()">GERAR PIX</button><button class="btn-main" style="background:#00a8ff;margin-top:10px" onclick="simulateDeposit()">⚡ SIMULAR</button><div id="pix-area" class="hidden" style="margin-top:15px"><img id="qr-img" src="" style="width:200px;border:2px solid white;border-radius:8px"><br><button class="btn-main btn-outline" style="margin-top:10px" onclick="copyPix()">COPIAR CÓDIGO</button></div><button class="close-btn" style="margin-top:15px; border:none; color:#ff4d4d; background:transparent; cursor:pointer" onclick="closeModal('deposit-modal')">FECHAR</button></div></div>
+    <div id="withdraw-modal" class="overlay hidden"><div class="modal"><h2>💸 Sacar</h2><input type="number" id="with-amount" placeholder="Valor"><select id="pix-type"><option value="cpf">CPF</option><option value="email">Email</option></select><input type="text" id="pix-key" placeholder="Chave Pix"><button class="btn-main btn-primary" onclick="requestWithdraw()">SOLICITAR</button><button class="close-btn" style="margin-top:15px; border:none; color:#ff4d4d; background:transparent; cursor:pointer" onclick="closeModal('withdraw-modal')">FECHAR</button></div></div>
+    <div id="profile-modal" class="overlay hidden"><div class="modal" style="max-width:500px"><h2>📜 Extrato</h2><div style="max-height:300px;overflow-y:auto"><table style="width:100%;font-size:12px;text-align:left;color:#b1bad3"><thead><tr><th>Tipo</th><th>Valor</th><th>Status</th><th>Data</th></tr></thead><tbody id="transaction-list"></tbody></table></div><button class="btn-main btn-outline" style="margin-top:10px" onclick="closeModal('profile-modal')">FECHAR</button></div></div>
 
     <div class="sidebar">
         <div class="logo-area">💎 Mines Pix</div>
-        <div class="user-info">
-            <div style="margin-bottom: 5px; color: white; font-size: 14px;">👋 Olá, <span id="user-name-display" style="color: #00e701;">Jogador</span></div>
-            <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#b1bad3;">
-                <span>CPF: <span id="user-cpf-display">...</span></span>
-                <button onclick="openModal('profile-modal')" style="background:#2f4553; border:none; color:white; cursor:pointer; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:bold;">📜 EXTRATO</button>
+        
+        <div class="user-card">
+            <div class="user-card-header">
+                <span>Olá,</span>
+                <button class="btn-extrato" onclick="openModal('profile-modal')">EXTRATO</button>
+            </div>
+            <div class="user-card-name" id="user-name-display">Visitante</div>
+            <div style="font-size:11px; color:#55657e; margin-top:2px">CPF: <span id="user-cpf-display">...</span></div>
+        </div>
+
+        <button class="btn-main btn-bonus" onclick="claimBonus()">🎁 BÔNUS DIÁRIO</button>
+        <button class="btn-main btn-outline" onclick="openModal('affiliate-modal')" style="margin-bottom:5px">🤝 AFILIADOS</button>
+        <button class="btn-main btn-outline" onclick="openModal('ranking-modal')">🏆 RANKING</button>
+        
+        <div style="margin-top: auto"></div>
+
+        <div class="input-group">
+            <label>Valor da Aposta</label>
+            <div class="input-wrapper">
+                <input type="number" id="betAmount" value="5.00">
+                <div class="input-actions">
+                    <button onclick="adjustBet(0.5)">½</button>
+                    <button onclick="adjustBet(2)">2x</button>
+                </div>
             </div>
         </div>
-        <button class="bonus-btn" onclick="claimBonus()">🎁 BÔNUS DIÁRIO</button>
-        <button class="affiliate-btn" onclick="openModal('affiliate-modal')">🤝 INDIQUE E GANHE</button>
-        <button class="ranking-btn" onclick="openModal('ranking-modal')">🏆 RANKING TOP 5</button>
-        <div style="margin-bottom:20px"></div>
-        <div class="control-group"><label>VALOR</label><div class="input-row"><input type="number" id="betAmount" value="5.00"><button onclick="adjustBet(0.5)">½</button><button onclick="adjustBet(2)">2x</button></div></div>
-        <div class="control-group"><label>MINAS</label><select id="minesCount"><option value="3">3 Minas</option><option value="5">5 Minas</option><option value="10">10 Minas</option></select></div>
-        <button id="action-btn">COMEÇAR</button>
-        <div class="finance-btns"><button onclick="openModal('deposit-modal')" class="dep-btn">DEPOSITAR</button><button onclick="openModal('withdraw-modal')" class="with-btn">SACAR</button></div>
+
+        <div class="input-group">
+            <label>Minas</label>
+            <div class="input-wrapper">
+                <select id="minesCount">
+                    <option value="3">3 Minas</option>
+                    <option value="5">5 Minas</option>
+                    <option value="10">10 Minas</option>
+                    <option value="20">20 Minas</option>
+                </select>
+            </div>
+        </div>
+
+        <button class="btn-main btn-primary" id="action-btn" onclick="handleAction()">COMEÇAR JOGO</button>
+        
+        <div class="finance-row">
+            <button class="btn-main btn-outline" style="background:#00e701; color:black; border:none" onclick="openModal('deposit-modal')">DEPOSITAR</button>
+            <button class="btn-main btn-outline" onclick="openModal('withdraw-modal')">SACAR</button>
+        </div>
     </div>
 
     <div class="game-area">
         <div class="game-content">
-            <div class="balance-display">R$ <span id="balance">0.00</span></div>
-            <div class="grid-container" id="grid-container"><div class="grid" id="grid"></div></div>
+            <div class="balance-badge">
+                R$ <span id="balance">0.00</span>
+            </div>
+            
+            <div class="grid-container">
+                <div class="grid" id="grid"></div>
+            </div>
             
             <div class="stats-bar">
                 <div id="multiplier-display">1.00x</div>
                 <div id="message-display">Faça sua aposta</div>
             </div>
         </div>
-        
+
         <div class="footer">
-            <div class="footer-logos"><span class="footer-badge">🔞 +18</span><span class="footer-badge">🔒 SSL</span><span class="footer-badge">💠 PIX</span></div>
-            <div class="footer-links"><span onclick="openModal('terms-modal')">Termos</span><span onclick="openModal('privacy-modal')">Privacidade</span><span onclick="openModal('responsible-modal')">Responsável</span><span onclick="openModal('support-modal')">Suporte</span></div>
-            <p class="footer-text">Mines Pix é operado sob autorização nº 345.987.221/MFA.</p>
-            <p class="copyright">© 2024 Mines Pix.</p>
+            <div class="footer-logos">
+                <span class="footer-badge">🔞 +18</span>
+                <span class="footer-badge">🔒 SSL Seguro</span>
+            </div>
+            <div class="footer-links">
+                <span onclick="openModal('terms-modal')">Termos</span>
+                <span onclick="openModal('privacy-modal')">Privacidade</span>
+                <span onclick="openModal('responsible-modal')">Responsável</span>
+                <span onclick="openModal('support-modal')">Suporte</span>
+            </div>
+            <p style="opacity:0.5; margin-top:15px">
+                Mines Pix © 2024. Todos os direitos reservados.<br>
+                Plataforma operada sob licença internacional.
+            </p>
         </div>
+
         <div class="live-feed"><div class="feed-item" id="live-feed-content"></div></div>
     </div>
 
