@@ -1,6 +1,3 @@
-// ==================================================================
-// VARIÁVEIS GLOBAIS E INICIALIZAÇÃO
-// ==================================================================
 let currentUser = null;
 let isPlaying = false;
 
@@ -10,7 +7,6 @@ const msgEl = document.getElementById('message-display');
 const multEl = document.getElementById('multiplier-display');
 const btn = document.getElementById('action-btn');
 
-// Sistema de Sons
 const sounds = { 
     click: new Audio('click.mp3'), 
     diamond: new Audio('diamond.mp3'), 
@@ -18,90 +14,52 @@ const sounds = {
     win: new Audio('win.mp3') 
 };
 
-function playSound(name) { 
-    try { 
-        const s = sounds[name].cloneNode(); 
-        s.volume = 0.5; 
-        s.play().catch(()=>{}); 
-    } catch(e){ console.error("Erro som", e); } 
-}
+function playSound(name) { try { const s = sounds[name].cloneNode(); s.volume = 0.5; s.play().catch(()=>{}); } catch(e){ console.error("Erro som", e); } }
 
-// Verifica código de afiliado na URL
 const urlParams = new URLSearchParams(window.location.search);
 const refCodeFromUrl = urlParams.get('ref');
-if(refCodeFromUrl) { 
-    document.getElementById('reg-ref').value = refCodeFromUrl; 
-    showRegister(); 
-}
+if(refCodeFromUrl) { document.getElementById('reg-ref').value = refCodeFromUrl; showRegister(); }
 
 startLiveFeed();
 
-// Modal de Boas-vindas
-setTimeout(() => { 
-    if (!currentUser) document.getElementById('welcome-modal').classList.remove('hidden'); 
-}, 500);
-
-function showRegisterFromWelcome() { 
-    document.getElementById('welcome-modal').classList.add('hidden'); 
-    showRegister(); 
-}
-function showLoginFromWelcome() { 
-    document.getElementById('welcome-modal').classList.add('hidden'); 
-    showLogin(); 
-}
-
-// ==================================================================
-// NOTIFICAÇÕES (TOASTS) E NAVEGAÇÃO
-// ==================================================================
+// WELCOME
+setTimeout(() => { if (!currentUser) document.getElementById('welcome-modal').classList.remove('hidden'); }, 500);
+function showRegisterFromWelcome() { document.getElementById('welcome-modal').classList.add('hidden'); showRegister(); }
+function showLoginFromWelcome() { document.getElementById('welcome-modal').classList.add('hidden'); showLogin(); }
 
 function showToast(msg, type='success') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    const icon = type === 'success' ? '✅' : '❌';
-    toast.innerHTML = `<div style="font-size:20px">${icon}</div><div class="toast-msg">${msg}</div>`;
+    toast.innerHTML = `<div style="font-size:20px">${type === 'success' ? '✅' : '❌'}</div><div class="toast-msg">${msg}</div>`;
     container.appendChild(toast);
-    setTimeout(() => { 
-        toast.style.animation = 'fadeOut 0.5s forwards'; 
-        setTimeout(() => toast.remove(), 500); 
-    }, 3000);
+    setTimeout(() => { toast.style.animation = 'fadeOut 0.5s forwards'; setTimeout(() => toast.remove(), 500); }, 3000);
 }
 
-function showRegister() { 
-    document.getElementById('auth-screen').classList.add('hidden'); 
-    document.getElementById('register-modal').classList.remove('hidden'); 
-}
-function showLogin() { 
-    document.getElementById('register-modal').classList.add('hidden'); 
-    document.getElementById('recover-modal').classList.add('hidden'); 
-    document.getElementById('auth-screen').classList.remove('hidden'); 
-}
-function showRecover() { 
-    document.getElementById('auth-screen').classList.add('hidden'); 
-    document.getElementById('recover-modal').classList.remove('hidden'); 
+function showRegister() { document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('register-modal').classList.remove('hidden'); }
+function showLogin() { document.getElementById('register-modal').classList.add('hidden'); document.getElementById('recover-modal').classList.add('hidden'); document.getElementById('auth-screen').classList.remove('hidden'); }
+function showRecover() { document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('recover-modal').classList.remove('hidden'); }
+
+function openModal(id) { playSound('click'); document.getElementById(id).classList.remove('hidden'); if(id==='profile-modal') loadTransactions(); if(id==='affiliate-modal') loadAffiliateStats(); if(id==='ranking-modal') loadRanking(); }
+function closeModal(id) { playSound('click'); document.getElementById(id).classList.add('hidden'); }
+
+// --- FUNÇÃO NOVA PARA SELECIONAR TIPO DE PIX ---
+function selectPixType(type) {
+    // Atualiza o input oculto
+    document.getElementById('pix-type').value = type;
+    
+    // Atualiza visual dos botões
+    document.querySelectorAll('.pix-type-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
 }
 
-function openModal(id) { 
-    playSound('click'); 
-    document.getElementById(id).classList.remove('hidden'); 
-    if(id==='profile-modal') loadTransactions(); 
-    if(id==='affiliate-modal') loadAffiliateStats(); 
-    if(id==='ranking-modal') loadRanking(); 
-}
-
-function closeModal(id) { 
-    playSound('click'); 
-    document.getElementById(id).classList.add('hidden'); 
-}
-
-// ==================================================================
-// AUTENTICAÇÃO (LOGIN / REGISTRO / RECUPERAR)
-// ==================================================================
-
+// AUTH
 async function login() {
     const cpf = document.getElementById('login-cpf').value;
     const password = document.getElementById('login-pass').value;
-    if(!cpf || !password) return showToast("Preencha CPF e Senha", 'error');
+    if(!cpf || !password) return showToast("Preencha tudo", 'error');
     playSound('click');
     try {
         const res = await fetch('/api/auth/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({cpf, password}) });
@@ -123,13 +81,13 @@ async function register() {
     const phone = document.getElementById('reg-phone').value;
     const password = document.getElementById('reg-pass').value;
     const refCode = document.getElementById('reg-ref').value;
-    if(!name || !cpf || !phone || !password) return showToast("Preencha todos os campos", 'error');
+    if(!name || !cpf || !phone || !password) return showToast("Preencha tudo", 'error');
     playSound('click');
     try {
         const res = await fetch('/api/auth/register', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({name, cpf, phone, password, refCode}) });
         const data = await res.json();
         if(res.ok) {
-            showToast("Conta criada com sucesso!");
+            showToast("Conta criada!");
             currentUser = data;
             document.getElementById('register-modal').classList.add('hidden');
             document.getElementById('welcome-modal').classList.add('hidden');
@@ -137,7 +95,7 @@ async function register() {
             if(data.name) document.getElementById('user-name-display').innerText = data.name.split(' ')[0];
             updateBalance(); initGame();
         } else { showToast(data.error, 'error'); }
-    } catch (error) { showToast("Erro ao registrar", 'error'); }
+    } catch (error) { showToast("Erro registro", 'error'); }
 }
 
 async function resetPassword() {
@@ -145,19 +103,16 @@ async function resetPassword() {
     const name = document.getElementById('rec-name').value;
     const phone = document.getElementById('rec-phone').value;
     const newPassword = document.getElementById('rec-newpass').value;
-    if(!cpf || !name || !phone || !newPassword) return showToast("Preencha tudo para recuperar!", 'error');
+    if(!cpf || !name || !phone || !newPassword) return showToast("Preencha tudo!", 'error');
     playSound('click');
     try {
         const res = await fetch('/api/auth/reset-password', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({cpf, name, phone, newPassword}) });
         const data = await res.json();
         if(res.ok) { showToast(data.message); showLogin(); } else { showToast(data.error, 'error'); }
-    } catch(e) { showToast("Erro ao resetar senha", 'error'); }
+    } catch(e) { showToast("Erro reset", 'error'); }
 }
 
-// ==================================================================
-// FUNCIONALIDADES EXTRAS (Ranking, Afiliados, Bônus)
-// ==================================================================
-
+// EXTRAS
 async function loadRanking() {
     const tbody = document.getElementById('ranking-list');
     tbody.innerHTML = '<tr><td colspan="3">Carregando...</td></tr>';
@@ -165,39 +120,23 @@ async function loadRanking() {
         const res = await fetch('/api/leaderboard');
         const data = await res.json();
         tbody.innerHTML = '';
-        if(data.length === 0) { tbody.innerHTML = '<tr><td colspan="3">Sem dados.</td></tr>'; return; }
         data.forEach((u, index) => {
             let emoji = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : '•'));
             tbody.innerHTML += `<tr style="border-bottom:1px solid rgba(255,255,255,0.1); height:30px"><td>${emoji}</td><td>${u.name}</td><td style="color:#00e701;font-weight:bold">R$ ${u.balance.toFixed(2)}</td></tr>`;
         });
-    } catch(e) { tbody.innerHTML = '<tr><td colspan="3">Erro ao carregar</td></tr>'; }
+    } catch(e) { tbody.innerHTML = '<tr><td colspan="3">Erro</td></tr>'; }
 }
 
-// --- FUNÇÃO DE AFILIADOS CORRIGIDA ---
 async function loadAffiliateStats() {
     try {
         const res = await fetch(`/api/affiliates/stats/${currentUser.userId}`);
         const data = await res.json();
-        
-        // Verifica se os elementos existem antes de tentar preencher
-        const earningsEl = document.getElementById('aff-earnings');
-        if (earningsEl) earningsEl.innerText = `R$ ${Number(data.earnings).toFixed(2)}`;
-
-        const linkEl = document.getElementById('aff-link');
-        if (linkEl) linkEl.value = data.link;
-        
-    } catch(e) { console.error("Erro ao carregar afiliados", e); }
+        document.getElementById('aff-earnings').innerText = `R$ ${data.earnings.toFixed(2)}`;
+        document.getElementById('aff-count').innerText = data.count;
+        document.getElementById('aff-link').value = data.link;
+    } catch(e) {}
 }
-
-function copyAffiliateLink() { 
-    playSound('click'); 
-    const c = document.getElementById("aff-link"); 
-    if(c) {
-        c.select(); 
-        document.execCommand("copy"); 
-        showToast("Link copiado!"); 
-    }
-}
+function copyAffiliateLink() { playSound('click'); const c=document.getElementById("aff-link"); c.select(); document.execCommand("copy"); showToast("Link copiado!"); }
 
 async function claimBonus() {
     if(!currentUser) return;
@@ -223,10 +162,7 @@ function startLiveFeed() {
     }, 3000);
 }
 
-// ==================================================================
-// FINANCEIRO (Extrato, Depósito, Saque)
-// ==================================================================
-
+// FINANCEIRO
 async function loadTransactions() {
     const tbody = document.getElementById('transaction-list');
     tbody.innerHTML = '<tr><td colspan="4">Carregando...</td></tr>';
@@ -236,7 +172,7 @@ async function loadTransactions() {
     if(data.length===0) { tbody.innerHTML = '<tr><td colspan="4">Vazio.</td></tr>'; return; }
     data.forEach(t => {
         const date = new Date(t.createdAt).toLocaleDateString('pt-BR');
-        let color = t.status === 'approved' ? '#00e701' : (t.status === 'pending' ? 'orange' : 'red');
+        let color = t.status === 'approved' ? '#00e701' : 'orange';
         let typeShow = t.type === 'commission' ? 'Comissão' : (t.type === 'bonus' ? 'Bônus' : (t.type === 'deposit' ? 'Depósito' : 'Saque'));
         tbody.innerHTML += `<tr style="border-bottom:1px solid rgba(255,255,255,0.1)"><td style="padding:8px">${typeShow}</td><td>R$ ${t.amount.toFixed(2)}</td><td style="color:${color}">${t.status}</td><td style="color:#777">${date}</td></tr>`;
     });
@@ -245,7 +181,6 @@ async function loadTransactions() {
 async function generatePix() {
     playSound('click');
     const amount = document.getElementById('dep-amount').value;
-    if(!amount || amount < 1) return showToast("Valor mínimo R$ 1,00", 'error');
     const res = await fetch('/api/payment/deposit', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: currentUser.userId, amount }) });
     const data = await res.json();
     if(res.ok) {
@@ -259,9 +194,8 @@ async function generatePix() {
 async function simulateDeposit() {
     playSound('click');
     const amount = document.getElementById('dep-amount').value;
-    if(!amount || amount <= 0) return showToast("Valor inválido", 'error');
     const res = await fetch('/api/debug/deposit', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: currentUser.userId, amount }) });
-    if(res.ok) { playSound('win'); showToast("✅ Simulado!"); updateBalance(); closeModal('deposit-modal'); } else { showToast("Erro ao simular", 'error'); }
+    if(res.ok) { playSound('win'); showToast("✅ Simulado!"); updateBalance(); closeModal('deposit-modal'); } else { showToast("Erro", 'error'); }
 }
 
 function copyPix() { playSound('click'); const c=document.getElementById("copy-paste"); c.select(); document.execCommand("copy"); showToast("Copiado!"); }
@@ -270,17 +204,16 @@ async function requestWithdraw() {
     playSound('click');
     const amount = document.getElementById('with-amount').value;
     const pixKey = document.getElementById('pix-key').value;
+    
+    // PEGA O VALOR DO TIPO DE PIX (Corrigido)
     const pixKeyType = document.getElementById('pix-type').value;
-    if(!amount || !pixKey) return showToast("Preencha os dados", 'error');
+    
     const res = await fetch('/api/payment/withdraw', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: currentUser.userId, amount, pixKey, pixKeyType }) });
     const data = await res.json();
     if(res.ok) { showToast("Solicitado!"); closeModal('withdraw-modal'); updateBalance(); } else { showToast(data.error, 'error'); }
 }
 
-// ==================================================================
-// LÓGICA DO JOGO (MINES)
-// ==================================================================
-
+// --- JOGO ---
 function initGame() { renderGrid(true); btn.onclick = handleAction; }
 
 async function updateBalance() {
@@ -299,20 +232,19 @@ function renderGrid(disabled) {
     }
 }
 
-function adjustBet(m) { playSound('click'); const i = document.getElementById('betAmount'); let v = parseFloat(i.value); if(isNaN(v)) v=0; i.value = (v * m).toFixed(2); }
+function adjustBet(m) { playSound('click'); const i = document.getElementById('betAmount'); i.value = (parseFloat(i.value) * m).toFixed(2); }
 
 async function handleAction() {
     playSound('click');
     if (!isPlaying) {
-        // INICIAR JOGO
         const bet = document.getElementById('betAmount').value;
         const mines = document.getElementById('minesCount').value;
         const res = await fetch('/api/game/start', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({userId: currentUser.userId, betAmount: bet, minesCount: mines}) });
         const data = await res.json();
         if(data.error) return showToast(data.error, 'error');
+        
         isPlaying = true; updateBalance(); renderGrid(false); btn.innerText = "RETIRAR (Cashout)"; btn.classList.add('cashout-mode'); multEl.innerText = "1.00x";
     } else {
-        // CASHOUT
         const res = await fetch('/api/game/cashout', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({userId: currentUser.userId}) });
         const data = await res.json();
         finishGame(true, data.winAmount, data.grid);
@@ -334,7 +266,6 @@ async function playRound(index, cellBtn) {
         cellBtn.innerHTML = '<img src="bomb.png" style="width:95%; transform:scale(1.5)">';
         cellBtn.classList.add('boom'); 
         
-        // Animação de tremer (com verificação de existência)
         const container = document.getElementById('grid-container');
         if (container) {
             container.classList.remove('shake-anim'); 
@@ -347,14 +278,12 @@ async function playRound(index, cellBtn) {
 }
 
 function finishGame(win, amount, fullGrid) {
-    // RESET DO BOTÃO PRIMEIRO (CRÍTICO)
     isPlaying = false; 
     btn.innerText = "COMEÇAR JOGO"; 
     btn.classList.remove('cashout-mode'); 
     btn.disabled = false; 
     updateBalance();
     
-    // Revela o grid
     try {
         const cells = document.querySelectorAll('.cell');
         fullGrid.forEach((type, i) => {
