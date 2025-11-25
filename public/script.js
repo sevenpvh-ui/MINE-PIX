@@ -16,20 +16,14 @@ if(refCodeFromUrl) { document.getElementById('reg-ref').value = refCodeFromUrl; 
 
 startLiveFeed();
 
-// --- TOAST NOTIFICATIONS ---
+// --- TOAST ---
 function showToast(msg, type='success') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    toast.innerHTML = `
-        <div style="font-size:20px">${type === 'success' ? '✅' : '❌'}</div>
-        <div class="toast-msg">${msg}</div>
-    `;
+    toast.innerHTML = `<div style="font-size:20px">${type === 'success' ? '✅' : '❌'}</div><div class="toast-msg">${msg}</div>`;
     container.appendChild(toast);
-    setTimeout(() => {
-        toast.style.animation = 'fadeOut 0.5s forwards';
-        setTimeout(() => toast.remove(), 500);
-    }, 3000);
+    setTimeout(() => { toast.style.animation = 'fadeOut 0.5s forwards'; setTimeout(() => toast.remove(), 500); }, 3000);
 }
 
 // --- TELAS ---
@@ -37,7 +31,7 @@ function showRegister() { document.getElementById('auth-screen').classList.add('
 function showLogin() { document.getElementById('register-modal').classList.add('hidden'); document.getElementById('recover-modal').classList.add('hidden'); document.getElementById('auth-screen').classList.remove('hidden'); }
 function showRecover() { document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('recover-modal').classList.remove('hidden'); }
 
-// --- AUTENTICAÇÃO ---
+// --- AUTH ---
 async function login() {
     const cpf = document.getElementById('login-cpf').value;
     const password = document.getElementById('login-pass').value;
@@ -64,13 +58,13 @@ async function register() {
     const phone = document.getElementById('reg-phone').value;
     const password = document.getElementById('reg-pass').value;
     const refCode = document.getElementById('reg-ref').value;
-    if(!name || !cpf || !phone || !password) return showToast("Preencha todos os campos", 'error');
+    if(!name || !cpf || !phone || !password) return showToast("Preencha tudo", 'error');
     playSound('click');
     try {
         const res = await fetch('/api/auth/register', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({name, cpf, phone, password, refCode}) });
         const data = await res.json();
         if(res.ok) {
-            showToast("Conta criada com sucesso!");
+            showToast("Conta criada!");
             currentUser = data;
             document.getElementById('register-modal').classList.add('hidden');
             document.getElementById('user-cpf-display').innerText = data.cpf;
@@ -78,7 +72,7 @@ async function register() {
             updateBalance();
             initGame();
         } else { showToast(data.error, 'error'); }
-    } catch (error) { showToast("Erro ao registrar", 'error'); }
+    } catch (error) { showToast("Erro registro", 'error'); }
 }
 
 async function resetPassword() {
@@ -92,17 +86,11 @@ async function resetPassword() {
         const res = await fetch('/api/auth/reset-password', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({cpf, name, phone, newPassword}) });
         const data = await res.json();
         if(res.ok) { showToast(data.message); showLogin(); } else { showToast(data.error, 'error'); }
-    } catch(e) { showToast("Erro ao alterar senha", 'error'); }
+    } catch(e) { showToast("Erro reset", 'error'); }
 }
 
 // --- EXTRAS ---
-function openModal(id) { 
-    playSound('click');
-    document.getElementById(id).classList.remove('hidden'); 
-    if(id==='profile-modal') loadTransactions();
-    if(id==='affiliate-modal') loadAffiliateStats();
-    if(id==='ranking-modal') loadRanking();
-}
+function openModal(id) { playSound('click'); document.getElementById(id).classList.remove('hidden'); if(id==='profile-modal') loadTransactions(); if(id==='affiliate-modal') loadAffiliateStats(); if(id==='ranking-modal') loadRanking(); }
 function closeModal(id) { playSound('click'); document.getElementById(id).classList.add('hidden'); }
 
 async function loadRanking() {
@@ -116,7 +104,7 @@ async function loadRanking() {
             let emoji = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : '•'));
             tbody.innerHTML += `<tr style="border-bottom:1px solid #333; height:30px"><td>${emoji}</td><td>${u.name}</td><td style="color:#00e701;font-weight:bold">R$ ${u.balance.toFixed(2)}</td></tr>`;
         });
-    } catch(e) { tbody.innerHTML = '<tr><td colspan="3">Erro ao carregar</td></tr>'; }
+    } catch(e) { tbody.innerHTML = '<tr><td colspan="3">Erro</td></tr>'; }
 }
 
 async function loadAffiliateStats() {
@@ -164,7 +152,7 @@ async function loadTransactions() {
     data.forEach(t => {
         const date = new Date(t.createdAt).toLocaleDateString('pt-BR');
         let color = t.status === 'approved' ? '#00e701' : 'orange';
-        let typeShow = t.type === 'commission' ? 'Comissão' : t.type;
+        let typeShow = t.type === 'commission' ? 'Comissão' : (t.type === 'bonus' ? 'Bônus' : t.type);
         tbody.innerHTML += `<tr style="border-bottom:1px solid #333"><td style="padding:8px">${typeShow}</td><td>R$ ${t.amount.toFixed(2)}</td><td style="color:${color}">${t.status}</td><td style="color:#777">${date}</td></tr>`;
     });
 }
@@ -186,7 +174,7 @@ async function simulateDeposit() {
     playSound('click');
     const amount = document.getElementById('dep-amount').value;
     const res = await fetch('/api/debug/deposit', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: currentUser.userId, amount }) });
-    if(res.ok) { playSound('win'); showToast("✅ Simulado com sucesso!"); updateBalance(); closeModal('deposit-modal'); } else { showToast("Erro ao simular", 'error'); }
+    if(res.ok) { playSound('win'); showToast("✅ Simulado!"); updateBalance(); closeModal('deposit-modal'); } else { showToast("Erro", 'error'); }
 }
 
 function copyPix() { playSound('click'); const c=document.getElementById("copy-paste"); c.select(); document.execCommand("copy"); showToast("Copiado!"); }
@@ -198,7 +186,7 @@ async function requestWithdraw() {
     const pixKeyType = document.getElementById('pix-type').value;
     const res = await fetch('/api/payment/withdraw', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: currentUser.userId, amount, pixKey, pixKeyType }) });
     const data = await res.json();
-    if(res.ok) { showToast("Saque solicitado!"); closeModal('withdraw-modal'); updateBalance(); } else { showToast(data.error, 'error'); }
+    if(res.ok) { showToast("Solicitado!"); closeModal('withdraw-modal'); updateBalance(); } else { showToast(data.error, 'error'); }
 }
 
 // --- JOGO ---
@@ -239,10 +227,19 @@ async function handleAction() {
 async function playRound(index, cellBtn) {
     const res = await fetch('/api/game/play', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({userId: currentUser.userId, index}) });
     const data = await res.json();
+    
     if(data.status === 'safe') {
         playSound('diamond');
+        
+        // LÓGICA DA ANIMAÇÃO DO MULTIPLICADOR
+        multEl.innerText = `${data.multiplier}x`;
+        multEl.classList.remove('pulse-effect');
+        void multEl.offsetWidth; // Truque para reiniciar animação CSS
+        multEl.classList.add('pulse-effect');
+
         cellBtn.innerHTML = '<img src="diamond.png" style="width:95%; transform:scale(1.8); drop-shadow: 0 0 5px #00e701;" onerror="this.parentNode.innerText=\'💎\'">';
-        cellBtn.classList.add('revealed', 'safe'); cellBtn.disabled = true; multEl.innerText = `${data.multiplier}x`; btn.innerText = `RETIRAR R$ ${data.potentialWin}`;
+        cellBtn.classList.add('revealed', 'safe'); cellBtn.disabled = true; 
+        btn.innerText = `RETIRAR R$ ${data.potentialWin}`;
     } else if(data.status === 'boom') {
         playSound('bomb');
         cellBtn.innerHTML = '<img src="bomb.png" style="width:95%; transform:scale(1.8);" onerror="this.parentNode.innerText=\'💣\'">';
