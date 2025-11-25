@@ -27,20 +27,38 @@ const client = new MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN });
 const payment = new Payment(client);
 
 // --- AUTENTICAÇÃO ---
+
+// REGISTRO (ATUALIZADO COM NOME E TELEFONE)
 app.post('/api/auth/register', async (req, res) => {
-    const { cpf, password } = req.body;
+    const { name, cpf, phone, password } = req.body;
     try {
-        if (!cpf || !password) return res.status(400).json({ error: "CPF e senha obrigatórios" });
+        if (!name || !cpf || !phone || !password) {
+            return res.status(400).json({ error: "Preencha todos os campos!" });
+        }
+        
         const cleanCpf = cpf.replace(/\D/g, ''); 
-        if (await User.findOne({ cpf: cleanCpf })) return res.status(400).json({ error: "CPF já cadastrado" });
+        
+        if (await User.findOne({ cpf: cleanCpf })) {
+            return res.status(400).json({ error: "CPF já cadastrado!" });
+        }
         
         const hashedPassword = await bcrypt.hash(password, 10);
-        const user = await User.create({ cpf: cleanCpf, password: hashedPassword });
+        
+        const user = await User.create({ 
+            name, 
+            phone, 
+            cpf: cleanCpf, 
+            password: hashedPassword 
+        });
         
         res.json({ message: "Criado", userId: user._id, cpf: user.cpf, balance: user.balance });
-    } catch (e) { res.status(500).json({ error: "Erro ao registrar" }); }
+    } catch (e) { 
+        console.error("Erro Registro:", e);
+        res.status(500).json({ error: "Erro interno ao registrar." }); 
+    }
 });
 
+// LOGIN
 app.post('/api/auth/login', async (req, res) => {
     const { cpf, password } = req.body;
     try {
@@ -66,7 +84,6 @@ app.post('/api/payment/deposit', async (req, res) => {
     const { userId, amount } = req.body;
     try {
         const user = await User.findById(userId);
-        // Gera email técnico com o novo nome
         const fakeEmail = `${user.cpf}@minespix.com`; 
         
         const body = {
