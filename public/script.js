@@ -185,6 +185,13 @@ async function generatePix() {
     } else { showToast(data.error, 'error'); }
 }
 
+async function simulateDeposit() {
+    playSound('click');
+    const amount = document.getElementById('dep-amount').value;
+    const res = await fetch('/api/debug/deposit', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: currentUser.userId, amount }) });
+    if(res.ok) { playSound('win'); showToast("✅ Simulado!"); updateBalance(); closeModal('deposit-modal'); } else { showToast("Erro", 'error'); }
+}
+
 function copyPix() { playSound('click'); const c=document.getElementById("copy-paste"); c.select(); document.execCommand("copy"); showToast("Copiado!"); }
 
 async function requestWithdraw() {
@@ -197,7 +204,7 @@ async function requestWithdraw() {
     if(res.ok) { showToast("Solicitado!"); closeModal('withdraw-modal'); updateBalance(); } else { showToast(data.error, 'error'); }
 }
 
-// JOGO MINES
+// --- JOGO ---
 function initGame() { renderGrid(true); btn.onclick = handleAction; }
 
 async function updateBalance() {
@@ -216,7 +223,7 @@ function renderGrid(disabled) {
     }
 }
 
-function adjustBet(m) { playSound('click'); const i = document.getElementById('betAmount'); let v = parseFloat(i.value); if(isNaN(v)) v=0; i.value = (v * m).toFixed(2); }
+function adjustBet(m) { playSound('click'); const i = document.getElementById('betAmount'); i.value = (parseFloat(i.value) * m).toFixed(2); }
 
 async function handleAction() {
     playSound('click');
@@ -238,18 +245,19 @@ async function handleAction() {
 async function playRound(index, cellBtn) {
     const res = await fetch('/api/game/play', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({userId: currentUser.userId, index}) });
     const data = await res.json();
+    
     if(data.status === 'safe') {
         playSound('diamond');
         multEl.innerText = `${data.multiplier}x`;
         multEl.classList.remove('pulse-effect'); void multEl.offsetWidth; multEl.classList.add('pulse-effect');
-        cellBtn.innerHTML = '<img src="diamond.png" style="width:100%; transform:scale(1.5); drop-shadow:0 0 10px #00e701">';
+        cellBtn.innerHTML = '<img src="diamond.png" style="width:95%; transform:scale(1.5); drop-shadow:0 0 10px #00e701">';
         cellBtn.classList.add('revealed', 'safe'); cellBtn.disabled = true; btn.innerText = `RETIRAR R$ ${data.potentialWin}`;
     } else if(data.status === 'boom') {
         playSound('bomb');
-        cellBtn.innerHTML = '<img src="bomb.png" style="width:100%; transform:scale(1.5)">';
+        cellBtn.innerHTML = '<img src="bomb.png" style="width:95%; transform:scale(1.5)">';
         cellBtn.classList.add('boom'); 
         
-        // ANIMAÇÃO SHAKE E FIM DO JOGO
+        // ANIMAÇÃO SHAKE E FORÇA RESET
         const container = document.getElementById('grid-container');
         container.classList.remove('shake-anim'); void container.offsetWidth; container.classList.add('shake-anim');
         
@@ -258,16 +266,17 @@ async function playRound(index, cellBtn) {
 }
 
 function finishGame(win, amount, fullGrid) {
+    // RESET FORÇADO DO BOTÃO
     isPlaying = false; 
-    btn.innerText = "COMEÇAR JOGO"; // Reseta o botão
+    btn.innerText = "COMEÇAR JOGO"; 
     btn.classList.remove('cashout-mode'); 
     updateBalance();
     
     const cells = document.querySelectorAll('.cell');
     fullGrid.forEach((type, i) => {
         cells[i].disabled = true; cells[i].classList.add('revealed');
-        if(type === 'mine') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="bomb.png" style="width:100%; transform:scale(1.5); opacity:0.5">';
-        if(type === 'diamond') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="diamond.png" style="width:100%; transform:scale(1.5); opacity:0.5">';
+        if(type === 'mine') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="bomb.png" style="width:95%; transform:scale(1.5); opacity:0.5">';
+        if(type === 'diamond') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="diamond.png" style="width:95%; transform:scale(1.5); opacity:0.5">';
     });
     if(win) { playSound('win'); showToast(`GANHOU R$ ${amount}!`); confetti(); } else { showToast("Você perdeu!", 'error'); }
 }
