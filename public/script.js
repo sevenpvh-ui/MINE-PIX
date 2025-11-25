@@ -6,28 +6,42 @@ const balanceEl = document.getElementById('balance');
 const msgEl = document.getElementById('message-display');
 const multEl = document.getElementById('multiplier-display');
 const btn = document.getElementById('action-btn');
-const authMsg = document.getElementById('auth-msg');
 
 const sounds = { click: new Audio('click.mp3'), diamond: new Audio('diamond.mp3'), bomb: new Audio('bomb.mp3'), win: new Audio('win.mp3') };
 function playSound(name) { try { const s = sounds[name].cloneNode(); s.volume=0.5; s.play().catch(()=>{}); } catch(e){} }
 
-// Check URL ref
 const urlParams = new URLSearchParams(window.location.search);
 const refCodeFromUrl = urlParams.get('ref');
 if(refCodeFromUrl) { document.getElementById('reg-ref').value = refCodeFromUrl; showRegister(); }
 
 startLiveFeed();
 
+// --- TOAST NOTIFICATIONS ---
+function showToast(msg, type='success') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <div style="font-size:20px">${type === 'success' ? '✅' : '❌'}</div>
+        <div class="toast-msg">${msg}</div>
+    `;
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.style.animation = 'fadeOut 0.5s forwards';
+        setTimeout(() => toast.remove(), 500);
+    }, 3000);
+}
+
+// --- TELAS ---
 function showRegister() { document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('register-modal').classList.remove('hidden'); }
 function showLogin() { document.getElementById('register-modal').classList.add('hidden'); document.getElementById('recover-modal').classList.add('hidden'); document.getElementById('auth-screen').classList.remove('hidden'); }
 function showRecover() { document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('recover-modal').classList.remove('hidden'); }
-function showMsg(id, msg) { const el = document.getElementById(id); el.innerText = msg; setTimeout(()=>el.innerText="", 3000); }
 
-// --- AUTH ---
+// --- AUTENTICAÇÃO ---
 async function login() {
     const cpf = document.getElementById('login-cpf').value;
     const password = document.getElementById('login-pass').value;
-    if(!cpf || !password) return showMsg('login-msg', "Preencha tudo");
+    if(!cpf || !password) return showToast("Preencha CPF e Senha", 'error');
     playSound('click');
     try {
         const res = await fetch('/api/auth/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({cpf, password}) });
@@ -36,12 +50,12 @@ async function login() {
             currentUser = data;
             document.getElementById('auth-screen').classList.add('hidden');
             document.getElementById('user-cpf-display').innerText = data.cpf;
-            // MOSTRA O NOME (Primeiro nome apenas)
-            document.getElementById('user-name-display').innerText = data.name.split(' ')[0];
+            if(data.name) document.getElementById('user-name-display').innerText = data.name.split(' ')[0];
             updateBalance();
             initGame();
-        } else { showMsg('login-msg', data.error); }
-    } catch (error) { showMsg('login-msg', "Erro conexão"); }
+            showToast(`Bem-vindo, ${data.name.split(' ')[0]}!`);
+        } else { showToast(data.error, 'error'); }
+    } catch (error) { showToast("Erro de conexão", 'error'); }
 }
 
 async function register() {
@@ -50,22 +64,21 @@ async function register() {
     const phone = document.getElementById('reg-phone').value;
     const password = document.getElementById('reg-pass').value;
     const refCode = document.getElementById('reg-ref').value;
-    if(!name || !cpf || !phone || !password) return showMsg('reg-msg', "Preencha tudo!");
+    if(!name || !cpf || !phone || !password) return showToast("Preencha todos os campos", 'error');
     playSound('click');
     try {
         const res = await fetch('/api/auth/register', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({name, cpf, phone, password, refCode}) });
         const data = await res.json();
         if(res.ok) {
-            alert("Conta criada!");
+            showToast("Conta criada com sucesso!");
             currentUser = data;
             document.getElementById('register-modal').classList.add('hidden');
             document.getElementById('user-cpf-display').innerText = data.cpf;
-            // MOSTRA O NOME
-            document.getElementById('user-name-display').innerText = data.name.split(' ')[0];
+            if(data.name) document.getElementById('user-name-display').innerText = data.name.split(' ')[0];
             updateBalance();
             initGame();
-        } else { showMsg('reg-msg', data.error); }
-    } catch (error) { showMsg('reg-msg', "Erro registro"); }
+        } else { showToast(data.error, 'error'); }
+    } catch (error) { showToast("Erro ao registrar", 'error'); }
 }
 
 async function resetPassword() {
@@ -73,18 +86,38 @@ async function resetPassword() {
     const name = document.getElementById('rec-name').value;
     const phone = document.getElementById('rec-phone').value;
     const newPassword = document.getElementById('rec-newpass').value;
-    if(!cpf || !name || !phone || !newPassword) return showMsg('rec-msg', "Preencha tudo!");
+    if(!cpf || !name || !phone || !newPassword) return showToast("Preencha tudo!", 'error');
     playSound('click');
     try {
         const res = await fetch('/api/auth/reset-password', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({cpf, name, phone, newPassword}) });
         const data = await res.json();
-        if(res.ok) { alert("✅ "+data.message); showLogin(); } else { showMsg('rec-msg', data.error); }
-    } catch(e) { showMsg('rec-msg', "Erro reset"); }
+        if(res.ok) { showToast(data.message); showLogin(); } else { showToast(data.error, 'error'); }
+    } catch(e) { showToast("Erro ao alterar senha", 'error'); }
 }
 
 // --- EXTRAS ---
-function openModal(id) { playSound('click'); document.getElementById(id).classList.remove('hidden'); if(id==='profile-modal') loadTransactions(); if(id==='affiliate-modal') loadAffiliateStats(); }
+function openModal(id) { 
+    playSound('click');
+    document.getElementById(id).classList.remove('hidden'); 
+    if(id==='profile-modal') loadTransactions();
+    if(id==='affiliate-modal') loadAffiliateStats();
+    if(id==='ranking-modal') loadRanking();
+}
 function closeModal(id) { playSound('click'); document.getElementById(id).classList.add('hidden'); }
+
+async function loadRanking() {
+    const tbody = document.getElementById('ranking-list');
+    tbody.innerHTML = '<tr><td colspan="3">Carregando...</td></tr>';
+    try {
+        const res = await fetch('/api/leaderboard');
+        const data = await res.json();
+        tbody.innerHTML = '';
+        data.forEach((u, index) => {
+            let emoji = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : '•'));
+            tbody.innerHTML += `<tr style="border-bottom:1px solid #333; height:30px"><td>${emoji}</td><td>${u.name}</td><td style="color:#00e701;font-weight:bold">R$ ${u.balance.toFixed(2)}</td></tr>`;
+        });
+    } catch(e) { tbody.innerHTML = '<tr><td colspan="3">Erro ao carregar</td></tr>'; }
+}
 
 async function loadAffiliateStats() {
     try {
@@ -95,7 +128,7 @@ async function loadAffiliateStats() {
         document.getElementById('aff-link').value = data.link;
     } catch(e) {}
 }
-function copyAffiliateLink() { playSound('click'); const c=document.getElementById("aff-link"); c.select(); document.execCommand("copy"); alert("Copiado!"); }
+function copyAffiliateLink() { playSound('click'); const c=document.getElementById("aff-link"); c.select(); document.execCommand("copy"); showToast("Link copiado!"); }
 
 async function claimBonus() {
     if(!currentUser) return;
@@ -103,20 +136,21 @@ async function claimBonus() {
     try {
         const res = await fetch('/api/bonus/daily', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({userId: currentUser.userId}) });
         const data = await res.json();
-        if(res.ok) { playSound('win'); alert("🎁 "+data.message); updateBalance(); confetti(); } else { alert("⏳ "+data.error); }
+        if(res.ok) { playSound('win'); showToast(data.message); updateBalance(); confetti(); } else { showToast(data.error, 'error'); }
     } catch(e) {}
 }
 
 function startLiveFeed() {
-    const names = ["João", "Pedro", "Maria", "Lucas", "Ana", "Carlos"];
+    const names = ["João", "Pedro", "Maria", "Lucas", "Ana", "Carlos", "Bia"];
     const feedEl = document.getElementById('live-feed-content');
     setInterval(() => {
-        const name = names[Math.floor(Math.random()*names.length)]+"***";
-        const amount = (Math.random()*100+10).toFixed(2);
+        const name = names[Math.floor(Math.random() * names.length)] + "***";
+        const amount = (Math.random() * 100 + 10).toFixed(2);
         const item = document.createElement('span');
-        item.style.marginRight="40px"; item.innerHTML=`🔥 ${name} ganhou <span class="feed-money">R$ ${amount}</span>`;
+        item.style.marginRight = "40px";
+        item.innerHTML = `🔥 ${name} ganhou <span class="feed-money">R$ ${amount}</span>`;
         feedEl.appendChild(item);
-        if(feedEl.children.length>10) feedEl.removeChild(feedEl.firstChild);
+        if(feedEl.children.length > 10) feedEl.removeChild(feedEl.firstChild);
     }, 3000);
 }
 
@@ -130,7 +164,7 @@ async function loadTransactions() {
     data.forEach(t => {
         const date = new Date(t.createdAt).toLocaleDateString('pt-BR');
         let color = t.status === 'approved' ? '#00e701' : 'orange';
-        let typeShow = t.type === 'commission' ? 'Comissão' : (t.type === 'bonus' ? 'Bônus' : t.type);
+        let typeShow = t.type === 'commission' ? 'Comissão' : t.type;
         tbody.innerHTML += `<tr style="border-bottom:1px solid #333"><td style="padding:8px">${typeShow}</td><td>R$ ${t.amount.toFixed(2)}</td><td style="color:${color}">${t.status}</td><td style="color:#777">${date}</td></tr>`;
     });
 }
@@ -144,18 +178,18 @@ async function generatePix() {
         document.getElementById('pix-area').classList.remove('hidden');
         document.getElementById('qr-img').src = `data:image/jpeg;base64,${data.qrCodeBase64}`;
         document.getElementById('copy-paste').value = data.copyPaste;
-        setInterval(async()=>{await updateBalance()},5000);
-    } else { alert(data.error); }
+        setInterval(async () => { await updateBalance(); }, 5000);
+    } else { showToast(data.error, 'error'); }
 }
 
 async function simulateDeposit() {
     playSound('click');
     const amount = document.getElementById('dep-amount').value;
     const res = await fetch('/api/debug/deposit', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: currentUser.userId, amount }) });
-    if(res.ok) { playSound('win'); alert("✅ Simulado!"); updateBalance(); closeModal('deposit-modal'); }
+    if(res.ok) { playSound('win'); showToast("✅ Simulado com sucesso!"); updateBalance(); closeModal('deposit-modal'); } else { showToast("Erro ao simular", 'error'); }
 }
 
-function copyPix() { playSound('click'); const c=document.getElementById("copy-paste"); c.select(); document.execCommand("copy"); alert("Copiado!"); }
+function copyPix() { playSound('click'); const c=document.getElementById("copy-paste"); c.select(); document.execCommand("copy"); showToast("Copiado!"); }
 
 async function requestWithdraw() {
     playSound('click');
@@ -164,20 +198,15 @@ async function requestWithdraw() {
     const pixKeyType = document.getElementById('pix-type').value;
     const res = await fetch('/api/payment/withdraw', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: currentUser.userId, amount, pixKey, pixKeyType }) });
     const data = await res.json();
-    if(res.ok) { alert("Solicitado!"); closeModal('withdraw-modal'); updateBalance(); } else { alert(data.error); }
+    if(res.ok) { showToast("Saque solicitado!"); closeModal('withdraw-modal'); updateBalance(); } else { showToast(data.error, 'error'); }
 }
 
+// --- JOGO ---
 function initGame() { renderGrid(true); btn.onclick = handleAction; }
 
 async function updateBalance() {
     if(!currentUser) return;
-    try { 
-        const res = await fetch(`/api/me/${currentUser.userId}`); 
-        const data = await res.json(); 
-        balanceEl.innerText = parseFloat(data.balance).toFixed(2); 
-        // Garante que o nome atualize se recarregar
-        if(data.name) document.getElementById('user-name-display').innerText = data.name.split(' ')[0];
-    } catch(e) {}
+    try { const res = await fetch(`/api/me/${currentUser.userId}`); const data = await res.json(); balanceEl.innerText = parseFloat(data.balance).toFixed(2); if(data.name) document.getElementById('user-name-display').innerText = data.name.split(' ')[0]; } catch(e) {}
 }
 
 function renderGrid(disabled) {
@@ -198,7 +227,7 @@ async function handleAction() {
         const mines = document.getElementById('minesCount').value;
         const res = await fetch('/api/game/start', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({userId: currentUser.userId, betAmount: bet, minesCount: mines}) });
         const data = await res.json();
-        if(data.error) return alert(data.error);
+        if(data.error) return showToast(data.error, 'error');
         isPlaying = true; updateBalance(); renderGrid(false); btn.innerText = "RETIRAR (Cashout)"; btn.classList.add('cashout-mode'); multEl.innerText = "1.00x";
     } else {
         const res = await fetch('/api/game/cashout', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({userId: currentUser.userId}) });
@@ -231,7 +260,7 @@ function finishGame(win, amount, fullGrid) {
         if(type === 'mine') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="bomb.png" style="width:95%; transform:scale(1.8); opacity:0.5">';
         if(type === 'diamond') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="diamond.png" style="width:95%; transform:scale(1.8); opacity:0.5">';
     });
-    if(win) { playSound('win'); msgEl.innerHTML = `<span style="color:#00e701">GANHOU R$ ${amount}</span>`; confetti(); } else { msgEl.innerHTML = `<span style="color:red">PERDEU!</span>`; }
+    if(win) { playSound('win'); showToast(`GANHOU R$ ${amount}!`); confetti(); } else { showToast("Você perdeu!", 'error'); }
 }
 
 function adjustBet(m) { playSound('click'); const i = document.getElementById('betAmount'); i.value = (parseFloat(i.value) * m).toFixed(2); }
