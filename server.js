@@ -8,12 +8,19 @@ const { MercadoPagoConfig, Payment } = require('mercadopago');
 
 const { createGrid, calculateMultiplier } = require('./gameEngine');
 const User = require('./models/User');
-const Settings = require('./models/Settings'); // NOVO IMPORT
+const Settings = require('./models/Settings');
 
 const app = express();
 
-// Rate Limit
-const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200, message: { error: "Muitas tentativas." } });
+// --- CORREÇÃO PARA O RENDER (IMPORTANTE) ---
+app.set('trust proxy', 1); 
+
+// Rate Limit (Proteção Anti-Spam)
+const limiter = rateLimit({ 
+    windowMs: 15 * 60 * 1000, 
+    max: 200, 
+    message: { error: "Muitas tentativas. Aguarde." }
+});
 app.use('/api/', limiter);
 
 app.use(cors());
@@ -29,7 +36,6 @@ const SITE_URL = process.env.SITE_URL;
 mongoose.connect(MONGO_URI)
     .then(async () => {
         console.log("✅ MongoDB Conectado");
-        // INICIALIZA CONFIGURAÇÕES SE NÃO EXISTIREM
         const settings = await Settings.findOne();
         if (!settings) {
             await Settings.create({ dailyBonus: 1.00 });
@@ -61,18 +67,32 @@ app.post('/api/auth/register', async (req, res) => {
         const cleanCpf = cpf.replace(/\D/g, ''); 
         if (await User.findOne({ cpf: cleanCpf })) return res.status(400).json({ error: "CPF já cadastrado" });
         
+        // Lógica de Afiliado (Corrigida e Testada)
         let referrerId = null;
-        if (refCode) {
-            const referrer = await User.findOne({ affiliateCode: refCode });
-            if (referrer) { referrerId = referrer._id; referrer.referralCount += 1; await referrer.save(); }
+        // Só busca se refCode não for vazio e não for undefined
+        if (refCode && refCode.trim() !== "") {
+            const referrer = await User.findOne({ affiliateCode: refCode.trim() });
+            if (referrer) { 
+                referrerId = referrer._id; 
+                referrer.referralCount += 1; 
+                await referrer.save(); 
+                console.log(`🤝 Nova indicação: ${referrer.name} indicou ${name}`);
+            }
         }
 
         const newAffiliateCode = 'mina-' + Math.random().toString(36).substring(2, 7);
         const hashedPassword = await bcrypt.hash(password, 10);
-        const user = await User.create({ name, phone, cpf: cleanCpf, password: hashedPassword, affiliateCode: newAffiliateCode, referredBy: referrerId });
+        
+        const user = await User.create({ 
+            name, phone, cpf: cleanCpf, password: hashedPassword, 
+            affiliateCode: newAffiliateCode, referredBy: referrerId 
+        });
         
         res.json({ message: "Criado", userId: user._id, name: user.name, cpf: user.cpf, balance: user.balance });
-    } catch (e) { res.status(500).json({ error: "Erro registro" }); }
+    } catch (e) { 
+        console.error("Erro Registro:", e);
+        res.status(500).json({ error: "Erro ao registrar" }); 
+    }
 });
 
 app.post('/api/auth/login', async (req, res) => {
@@ -82,7 +102,7 @@ app.post('/api/auth/login', async (req, res) => {
         const user = await User.findOne({ cpf: cleanCpf });
         if (!user) return res.status(400).json({ error: "CPF não encontrado" });
         
-        if (user.isBanned) return res.status(403).json({ error: "Conta bloqueada pelo administrador." });
+        if (user.isBanned) return res.status(403).json({ error: "Conta bloqueada." });
 
         if (!await bcrypt.compare(password, user.password)) return res.status(400).json({ error: "Senha incorreta" });
 
@@ -131,6 +151,7 @@ async function payCommission(userId, amount) {
             referrer.affiliateEarnings = (referrer.affiliateEarnings || 0) + commission;
             referrer.transactions.push({ type: 'commission', amount: commission, status: 'approved', mpPaymentId: `COM_${Date.now()}`, createdAt: Date.now() });
             await referrer.save();
+            console.log(`💰 Comissão paga: ${commission} para ${referrer.name}`);
         }
     } catch (e) { console.error("Erro comissão", e); }
 }
@@ -198,7 +219,7 @@ app.post('/api/payment/withdraw', async (req, res) => {
     } catch (e) { res.status(500).json({ error: "Erro saque" }); }
 });
 
-// --- EXTRAS (BÔNUS DIÁRIO DINÂMICO) ---
+// --- EXTRAS ---
 app.post('/api/bonus/daily', async (req, res) => {
     const { userId } = req.body;
     try {
@@ -207,7 +228,6 @@ app.post('/api/bonus/daily', async (req, res) => {
         const last = user.lastDailyBonus ? new Date(user.lastDailyBonus) : null;
         if (last && (now - last) < 86400000) return res.status(400).json({ error: "Volte amanhã!" });
         
-        // PEGA O VALOR DO BANCO
         const settings = await Settings.findOne();
         const bonusAmount = settings ? settings.dailyBonus : 1.00;
 
@@ -227,49 +247,27 @@ app.get('/api/me/transactions/:userId', async (req, res) => {
     } catch (e) { res.status(500).json({ error: "Erro histórico" }); }
 });
 
-// ==================================================================
-// 🕵️ ÁREA ADMINISTRATIVA (ATUALIZADA)
-// ==================================================================
-
-// Dashboard
+// --- ADMIN ---
 app.get('/api/admin/dashboard', async (req, res) => {
     const { secret } = req.headers;
     if(secret !== 'admin123') return res.status(403).json({ error: "Negado" });
-    
     try {
         const users = await User.find();
-        
-        let totalUsers = users.length;
-        let totalBalance = 0;
-        let totalDeposited = 0;
-        let totalWithdrawn = 0;
-        let pendingWithdrawals = [];
-        let topAffiliates = [];
-
+        let totalUsers = users.length, totalBalance = 0, totalDeposited = 0, totalWithdrawn = 0, pendingWithdrawals = [], topAffiliates = [];
         users.forEach(u => {
             totalBalance += u.balance;
             if(u.referralCount > 0) topAffiliates.push({ name: u.name, count: u.referralCount, earnings: u.affiliateEarnings });
-
             u.transactions.forEach(t => {
                 if (t.type === 'deposit' && t.status === 'approved') totalDeposited += t.amount;
                 if (t.type === 'withdraw' && t.status === 'approved') totalWithdrawn += t.amount;
-                if (t.type === 'withdraw' && t.status === 'pending') {
-                    pendingWithdrawals.push({ userId: u._id, cpf: u.cpf, amount: t.amount, pixKey: u.pixKey, pixType: u.pixKeyType, date: t.createdAt, transId: t._id });
-                }
+                if (t.type === 'withdraw' && t.status === 'pending') pendingWithdrawals.push({ userId: u._id, cpf: u.cpf, amount: t.amount, pixKey: u.pixKey, pixType: u.pixKeyType, date: t.createdAt, transId: t._id });
             });
         });
-
         topAffiliates.sort((a,b) => b.earnings - a.earnings);
-
-        res.json({ 
-            totalUsers, totalBalance, pendingWithdrawals,
-            financials: { deposited: totalDeposited, withdrawn: totalWithdrawn, profit: totalDeposited - totalWithdrawn },
-            topAffiliates: topAffiliates.slice(0, 10) 
-        });
+        res.json({ totalUsers, totalBalance, pendingWithdrawals, financials: { deposited: totalDeposited, withdrawn: totalWithdrawn, profit: totalDeposited - totalWithdrawn }, topAffiliates: topAffiliates.slice(0, 10) });
     } catch(e) { res.status(500).json({ error: "Erro admin" }); }
 });
 
-// CONFIGURAÇÕES (LER)
 app.get('/api/admin/settings', async (req, res) => {
     const { secret } = req.headers;
     if(secret !== 'admin123') return res.status(403).json({ error: "Negado" });
@@ -277,17 +275,12 @@ app.get('/api/admin/settings', async (req, res) => {
     res.json(settings);
 });
 
-// CONFIGURAÇÕES (ATUALIZAR)
 app.post('/api/admin/settings', async (req, res) => {
     const { secret, dailyBonus } = req.body;
     if(secret !== 'admin123') return res.status(403).json({ error: "Negado" });
-    
     const settings = await Settings.findOne();
-    if(settings) {
-        settings.dailyBonus = parseFloat(dailyBonus);
-        await settings.save();
-    }
-    res.json({ message: "Configurações atualizadas!" });
+    if(settings) { settings.dailyBonus = parseFloat(dailyBonus); await settings.save(); }
+    res.json({ message: "Atualizado!" });
 });
 
 app.post('/api/admin/users', async (req, res) => {
@@ -317,15 +310,14 @@ app.post('/api/admin/user/update', async (req, res) => {
     if(secret !== 'admin123') return res.status(403).json({ error: "Negado" });
     try {
         const user = await User.findById(userId);
-        if(!user) return res.status(404).json({ error: "User not found" });
         if(newBalance !== undefined) {
             user.transactions.push({ type: 'admin_adjustment', amount: parseFloat(newBalance) - user.balance, status: 'approved', mpPaymentId: 'ADMIN', createdAt: Date.now() });
             user.balance = parseFloat(newBalance);
         }
         if(isBanned !== undefined) user.isBanned = isBanned;
         await user.save();
-        res.json({ message: "Usuário atualizado!" });
-    } catch(e) { res.status(500).json({ error: "Erro update user" }); }
+        res.json({ message: "Atualizado!" });
+    } catch(e) { res.status(500).json({ error: "Erro update" }); }
 });
 
 // --- JOGO ---
