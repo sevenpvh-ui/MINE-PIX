@@ -9,20 +9,53 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     
     <style>
-        :root { --bg-dark: #0f1923; --bg-sidebar: #1a242d; --card-bg: #212d38; --accent: #00e701; --accent-hover: #00c901; --danger: #ff4d4d; --text-muted: #b1bad3; --white: #ffffff; }
+        /* --- VARIÁVEIS GLOBAIS (TEMA BLAZE DARK) --- */
+        :root { 
+            --bg-dark: #0f1923; 
+            --bg-sidebar: #1a242d; 
+            --card-bg: #212d38;
+            --accent: #00e701; /* Verde Neon */
+            --accent-hover: #00c901;
+            --danger: #ff4d4d; 
+            --text-muted: #b1bad3; 
+            --white: #ffffff;
+        }
+
         * { box-sizing: border-box; }
-        body { margin: 0; background-color: var(--bg-dark); color: var(--white); font-family: 'Inter', sans-serif; display: flex; height: 100vh; overflow: hidden; }
+
+        body { 
+            margin: 0; 
+            background-color: var(--bg-dark); 
+            color: var(--white); 
+            font-family: 'Inter', sans-serif; 
+            display: flex; 
+            height: 100vh; 
+            overflow: hidden; 
+        }
         
-        /* SIDEBAR */
-        .sidebar { width: 280px; background-color: var(--bg-sidebar); padding: 20px; display: flex; flex-direction: column; gap: 15px; border-right: 1px solid rgba(255,255,255,0.05); z-index: 10; overflow-y: auto; }
-        .logo-area { font-size: 26px; font-weight: 900; margin-bottom: 20px; letter-spacing: -1px; }
+        /* --- SIDEBAR --- */
+        .sidebar { 
+            width: 280px; 
+            background-color: var(--bg-sidebar); 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px; 
+            border-right: 1px solid rgba(255,255,255,0.05);
+            z-index: 10; 
+            overflow-y: auto; 
+        }
+
+        .logo-area { font-size: 26px; font-weight: 900; margin-bottom: 20px; letter-spacing: -1px; display: flex; align-items: center; gap: 10px; }
+        
+        /* CARTÃO DO USUÁRIO */
         .user-card { background: var(--card-bg); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
         .user-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 13px; color: var(--text-muted); }
         .user-card-name { font-weight: bold; color: var(--white); }
         .btn-extrato { background: rgba(255,255,255,0.1); border: none; color: var(--text-muted); padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 10px; font-weight: bold; transition: 0.2s;}
         .btn-extrato:hover { background: rgba(255,255,255,0.2); color: white; }
 
-        /* INPUTS & BUTTONS */
+        /* BOTÕES GERAIS */
         .btn-main { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: 800; font-size: 14px; cursor: pointer; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.5px; }
         .btn-primary { background-color: var(--accent); color: #000; }
         .btn-primary:hover { background-color: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0, 231, 1, 0.3); }
@@ -30,21 +63,26 @@
         .btn-bonus:hover { filter: brightness(1.1); transform: translateY(-2px); }
         .btn-outline { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: var(--text-muted); }
         .btn-outline:hover { border-color: var(--white); color: var(--white); }
+
+        /* INPUTS */
         .input-group { margin-bottom: 15px; }
         .input-group label { font-size: 11px; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; display: block; text-transform: uppercase; }
-        .input-wrapper { display: flex; background: var(--bg-dark); border-radius: 8px; padding: 5px; border: 1px solid rgba(255,255,255,0.1); }
+        .input-wrapper { display: flex; background: var(--bg-dark); border-radius: 8px; padding: 5px; border: 1px solid rgba(255,255,255,0.1); transition: 0.2s; }
+        .input-wrapper:focus-within { border-color: var(--accent); }
         .input-wrapper input, .input-wrapper select { background: transparent; border: none; color: white; padding: 10px; width: 100%; font-weight: 600; outline: none; }
         .input-actions { display: flex; gap: 5px; }
-        .input-actions button { background: var(--card-bg); border: none; color: var(--text-muted); width: 40px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .input-actions button { background: var(--card-bg); border: none; color: var(--text-muted); width: 40px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .input-actions button:hover { background: rgba(255,255,255,0.1); color: white; }
         .finance-row { display: flex; gap: 10px; margin-top: auto; }
 
-        /* GAME AREA */
+        /* --- ÁREA DO JOGO --- */
         .game-area { flex: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; background: radial-gradient(circle at center, #1b2733 0%, #0f1923 100%); }
         .game-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; width: 100%; max-width: 800px; margin: 0 auto; }
-        .balance-badge { background: var(--card-bg); padding: 10px 30px; border-radius: 50px; font-weight: bold; font-size: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); }
+
+        .balance-badge { background: var(--card-bg); padding: 10px 30px; border-radius: 50px; font-weight: bold; font-size: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); display: flex; gap: 10px; align-items: center; }
         .balance-badge span { color: var(--accent); }
-        
-        /* GRID COM ID CORRIGIDO */
+
+        /* GRID DO JOGO (Corrigido com ID) */
         .grid-container { background: var(--card-bg); padding: 25px; border-radius: 24px; margin-top: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05); }
         .grid { display: grid; grid-template-columns: repeat(5, 75px); gap: 12px; }
         .cell { width: 75px; height: 75px; background-color: #2f4553; border-radius: 12px; border: none; cursor: pointer; font-size: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 0 #1b2733; transition: all 0.1s; }
@@ -53,32 +91,36 @@
         .cell.safe { background-color: #0f1923; border: 2px solid #ed8a19; cursor: default; box-shadow: none; animation: popIn 0.3s; }
         .cell.boom { background-color: var(--danger); box-shadow: none; }
 
+        /* MULTIPLICADOR */
         .stats-bar { margin-top: 30px; text-align: center; background: rgba(0,0,0,0.3); padding: 15px 40px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); min-width: 220px; }
         #multiplier-display { font-size: 3em; font-weight: 900; color: white; text-shadow: 0 0 15px rgba(0, 231, 1, 0.6); display: block; line-height: 1; margin-bottom: 5px; }
         .pulse-effect { animation: pulseGreen 0.3s ease-out; }
         #message-display { color: #b1bad3; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; opacity: 0.8; }
 
-        /* MODALS & TOASTS */
+        /* MODAIS E OVERLAYS */
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 100; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
         .hidden { display: none !important; }
         .modal { background: var(--card-bg); padding: 30px; border-radius: 15px; width: 90%; max-width: 450px; text-align: center; border: 1px solid rgba(255,255,255,0.1); animation: popIn 0.3s; }
-        .modal h2 { margin-top: 0; color: white; margin-bottom: 20px; }
+        .modal h2 { margin-top: 0; color: white; margin-bottom: 20px; font-size: 22px; }
         .modal input { width: 100%; margin-bottom: 10px; background: var(--bg-dark); border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 8px; color: white; outline: none;}
+        .modal input:focus { border-color: var(--accent); }
         .close-btn { margin-top:15px; border:none; color:#ff4d4d; background:transparent; cursor:pointer; }
-        
-        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
-        .toast { background: #1a242d; color: white; padding: 15px 20px; border-radius: 8px; display: flex; align-items: center; gap: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); animation: slideIn 0.3s ease-out; min-width: 250px; border-left: 4px solid #00e701; }
-        .toast.error { border-left-color: #ff4d4d; }
 
-        /* WELCOME MODAL */
-        .welcome-modal-content { background: linear-gradient(135deg, #1a242d 0%, #0f1923 100%); border-radius: 16px; padding: 40px; text-align: center; width: 90%; max-width: 450px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 60px rgba(0,0,0,0.8); position: relative; overflow: hidden; animation: popIn 0.4s; }
+        /* MODAL DE BOAS-VINDAS */
+        .welcome-modal-content { background: linear-gradient(135deg, #1a242d 0%, #0f1923 100%); border-radius: 16px; padding: 40px; text-align: center; width: 90%; max-width: 450px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 60px rgba(0,0,0,0.8); position: relative; overflow: hidden; animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .welcome-modal-content::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(0,231,1,0.1) 0%, transparent 60%); z-index: 0; animation: rotate 10s linear infinite; }
         .welcome-icon { font-size: 60px; margin-bottom: 20px; position: relative; z-index: 1; }
         .welcome-title { font-size: 28px; font-weight: 900; color: white; margin-bottom: 10px; position: relative; z-index: 1; }
         .welcome-text { color: #b1bad3; font-size: 14px; margin-bottom: 30px; line-height: 1.5; position: relative; z-index: 1; }
-        .welcome-btn { width: 100%; padding: 16px; border-radius: 8px; border: none; font-weight: 800; font-size: 16px; cursor: pointer; position: relative; z-index: 1; background: var(--accent); color: #000; text-transform: uppercase; }
+        .welcome-btn { width: 100%; padding: 16px; border-radius: 8px; border: none; font-weight: 800; font-size: 16px; cursor: pointer; position: relative; z-index: 1; background: var(--accent); color: #000; text-transform: uppercase; transition: 0.2s; }
+        .welcome-btn:hover { transform: scale(1.02); box-shadow: 0 0 20px rgba(0,231,1,0.4); }
 
-        /* FOOTER */
+        /* NOTIFICAÇÕES (TOASTS) */
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+        .toast { background: #1a242d; color: white; padding: 15px 20px; border-radius: 8px; display: flex; align-items: center; gap: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); animation: slideIn 0.3s ease-out; min-width: 250px; border-left: 4px solid #00e701; }
+        .toast.error { border-left-color: #ff4d4d; }
+
+        /* FOOTER E LIVE FEED */
         .footer { background-color: #0b1219; padding: 40px 20px; text-align: center; font-size: 12px; color: #55657e; margin-top: auto; border-top: 1px solid rgba(255,255,255,0.05); }
         .footer-logos { display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; opacity: 0.7; }
         .footer-badge { border: 1px solid #2f4553; padding: 5px 10px; border-radius: 5px; }
@@ -88,14 +130,14 @@
         .feed-item { display: flex; gap: 10px; padding: 0 20px; white-space: nowrap; animation: slideLeft 20s linear infinite; }
         .feed-money { color: #00e701; font-weight: bold; }
 
-        /* ANIMATIONS */
+        /* ANIMAÇÕES */
         @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes pulseGreen { 0% { transform: scale(1); text-shadow: 0 0 15px rgba(0, 231, 1, 0.6); } 50% { transform: scale(1.1); text-shadow: 0 0 30px rgba(0, 231, 1, 1); } 100% { transform: scale(1); } }
         @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes slideLeft { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
         
-        /* SHAKE */
+        /* ANIMAÇÃO DE TREMER (BOMBA) */
         @keyframes shake {
             0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); }
             20% { transform: translate(-3px, 0px) rotate(1deg); } 30% { transform: translate(3px, 2px) rotate(0deg); }
@@ -106,24 +148,24 @@
         }
         .shake-anim { animation: shake 0.5s; border: 2px solid #ff4d4d !important; }
 
-        /* MOBILE FIXES */
+        /* --- RESPONSIVIDADE (CELULAR) --- */
         @media (max-width: 768px) {
             body { flex-direction: column; height: auto; overflow-y: scroll; }
             .sidebar { width: 100%; padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); }
             .game-area { height: auto; display: block; padding-bottom: 40px; }
             
-            /* CORREÇÃO CRÍTICA MOBILE: Grid Grande e Quadrado */
+            /* Grid Grande e Quadrado no Celular */
             .grid { 
                 grid-template-columns: repeat(5, 1fr); 
                 gap: 8px; 
-                width: 95%; /* Ocupa quase toda a largura */
-                max-width: 500px;
+                width: 95%; 
+                max-width: 500px; 
                 margin: 0 auto;
             }
             .cell { 
                 width: auto; 
                 height: auto; 
-                aspect-ratio: 1/1; /* Força o quadrado perfeito */
+                aspect-ratio: 1/1; /* Garante o quadrado */
             }
             
             .live-feed { position: fixed; bottom: 0; left: 0; z-index: 100; }
@@ -139,59 +181,159 @@
         <div class="welcome-modal-content">
             <div class="welcome-icon">💎</div>
             <div class="welcome-title">Bem-vindo ao Mines Pix</div>
-            <div class="welcome-text">Cadastre-se agora e ganhe acesso exclusivo.</div>
+            <div class="welcome-text">
+                O jogo oficial que mais paga no Brasil.<br>
+                Cadastre-se agora e ganhe acesso exclusivo.
+            </div>
             <button class="welcome-btn" onclick="showRegisterFromWelcome()">CRIAR CONTA GRÁTIS</button>
-            <div style="margin-top: 15px; position: relative; z-index: 2;"><span onclick="showLoginFromWelcome()" style="color: #b1bad3; cursor: pointer; font-size: 13px;">Já tenho conta</span></div>
+            <div style="margin-top: 15px; position: relative; z-index: 2;">
+                <span onclick="showLoginFromWelcome()" style="color: #b1bad3; cursor: pointer; font-size: 13px;">Já tenho conta</span>
+            </div>
         </div>
     </div>
 
     <div id="terms-modal" class="overlay hidden"><div class="modal"><h2>📜 Termos</h2><p style="color:#b1bad3">1. +18.<br>2. Risco financeiro.</p><button class="btn-main btn-primary" onclick="closeModal('terms-modal')">FECHAR</button></div></div>
-    <div id="privacy-modal" class="overlay hidden"><div class="modal"><h2>🔒 Privacidade</h2><p style="color:#b1bad3">Dados seguros.</p><button class="btn-main btn-primary" onclick="closeModal('privacy-modal')">FECHAR</button></div></div>
+    <div id="privacy-modal" class="overlay hidden"><div class="modal"><h2>🔒 Privacidade</h2><p style="color:#b1bad3">Dados seguros e criptografados.</p><button class="btn-main btn-primary" onclick="closeModal('privacy-modal')">FECHAR</button></div></div>
     <div id="responsible-modal" class="overlay hidden"><div class="modal"><h2>🛡️ Jogo Responsável</h2><p style="color:#b1bad3">Jogue com moderação.</p><button class="btn-main btn-primary" onclick="closeModal('responsible-modal')">FECHAR</button></div></div>
     <div id="support-modal" class="overlay hidden"><div class="modal"><h2>🎧 Suporte</h2><p style="color:#b1bad3">suporte@minespix.com</p><button class="btn-main btn-primary" onclick="closeModal('support-modal')">FECHAR</button></div></div>
+
     <div id="ranking-modal" class="overlay hidden"><div class="modal"><h2>🏆 Ranking</h2><div style="max-height:200px;overflow:auto"><table style="width:100%;text-align:left;color:#b1bad3"><thead><tr><th>#</th><th>Nome</th><th>Saldo</th></tr></thead><tbody id="ranking-list"></tbody></table></div><button class="btn-main btn-primary" onclick="closeModal('ranking-modal')">FECHAR</button></div></div>
-    <div id="affiliate-modal" class="overlay hidden"><div class="modal"><h2>🤝 Indique e Ganhe</h2><div class="user-card" style="margin-bottom:15px; text-align:center"><div style="color:#b1bad3;font-size:11px;margin-bottom:5px">GANHOS TOTAIS</div><div class="affiliate-val" style="font-size:28px;color:var(--accent);font-weight:900" id="aff-earnings">R$ 0.00</div></div><input type="text" id="aff-link" readonly style="background:#0b1219; text-align:center; font-size:12px; margin-bottom:10px;"><button class="btn-main btn-primary" onclick="copyAffiliateLink()">COPIAR LINK</button><button class="btn-main btn-outline" style="margin-top:10px" onclick="closeModal('affiliate-modal')">FECHAR</button></div></div>
+    
+    <div id="affiliate-modal" class="overlay hidden">
+        <div class="modal">
+            <h2>🤝 Indique e Ganhe</h2>
+            <p style="color:#b1bad3">Ganhe 10% de comissão vitalícia.</p>
+            <div class="user-card" style="margin-bottom:15px; text-align:center">
+                <div style="color:#b1bad3;font-size:11px;margin-bottom:5px">GANHOS TOTAIS</div>
+                <div class="affiliate-val" style="font-size:28px;color:var(--accent);font-weight:900" id="aff-earnings">R$ 0.00</div>
+            </div>
+            <input type="text" id="aff-link" readonly style="background:#0b1219; text-align:center; font-size:12px; margin-bottom:10px;">
+            <button class="btn-main btn-primary" onclick="copyAffiliateLink()">COPIAR LINK</button>
+            <button class="btn-main btn-outline" style="margin-top:10px" onclick="closeModal('affiliate-modal')">FECHAR</button>
+        </div>
+    </div>
 
-    <div id="auth-screen" class="overlay hidden"><div class="modal"><h2>🔐 Entrar</h2><div class="input-group"><label>CPF</label><input type="tel" id="login-cpf" placeholder="000.000.000-00" maxlength="14"></div><div class="input-group"><label>Senha</label><input type="password" id="login-pass" placeholder="••••••"></div><button class="btn-main btn-primary" onclick="login()">ENTRAR</button><div style="margin-top:15px;display:flex;justify-content:space-between;font-size:12px"><span onclick="showRecover()" style="cursor:pointer;color:var(--text-muted)">Esqueci a senha</span><span onclick="showRegister()" style="cursor:pointer;color:var(--accent);font-weight:bold">Criar conta</span></div></div></div>
-    <div id="register-modal" class="overlay hidden"><div class="modal"><h2>🚀 Criar Conta</h2><div class="input-group"><label>Nome Completo</label><input type="text" id="reg-name"></div><div class="input-group"><label>CPF</label><input type="tel" id="reg-cpf" maxlength="14"></div><div class="input-group"><label>Telefone</label><input type="tel" id="reg-phone"></div><div class="input-group"><label>Senha</label><input type="password" id="reg-pass"></div><input type="hidden" id="reg-ref"><button class="btn-main btn-primary" onclick="register()">CADASTRAR</button><div style="margin-top:15px"><span onclick="showLogin()" style="cursor:pointer;color:var(--text-muted);font-size:12px">Já tenho conta</span></div></div></div>
-    <div id="recover-modal" class="overlay hidden"><div class="modal"><h2>🔑 Recuperar</h2><input type="tel" id="rec-cpf" placeholder="CPF"><input type="text" id="rec-name" placeholder="Nome"><input type="tel" id="rec-phone" placeholder="Telefone"><input type="password" id="rec-newpass" placeholder="Nova Senha"><button class="btn-main btn-primary" onclick="resetPassword()">ALTERAR SENHA</button><div style="margin-top:15px"><span onclick="showLogin()" style="cursor:pointer;color:var(--text-muted)">Voltar</span></div></div></div>
+    <div id="auth-screen" class="overlay hidden">
+        <div class="modal">
+            <h2>🔐 Entrar</h2>
+            <div class="input-group"><label>CPF</label><input type="tel" id="login-cpf" placeholder="000.000.000-00" maxlength="14"></div>
+            <div class="input-group"><label>Senha</label><input type="password" id="login-pass" placeholder="••••••"></div>
+            <button class="btn-main btn-primary" onclick="login()">ENTRAR</button>
+            <div style="margin-top:15px;display:flex;justify-content:space-between;font-size:12px"><span onclick="showRecover()" style="cursor:pointer;color:var(--text-muted)">Esqueci a senha</span><span onclick="showRegister()" style="cursor:pointer;color:var(--accent);font-weight:bold">Criar conta</span></div>
+        </div>
+    </div>
 
-    <div id="deposit-modal" class="overlay hidden"><div class="modal"><h2>💰 Depositar</h2><input type="number" id="dep-amount" placeholder="Valor (Ex: 20.00)"><button class="btn-main btn-primary" onclick="generatePix()">GERAR PIX</button><button class="btn-main" style="background:#00a8ff;margin-top:10px" onclick="simulateDeposit()">⚡ SIMULAR</button><div id="pix-area" class="hidden" style="margin-top:15px"><img id="qr-img" src="" style="width:200px;border:2px solid white;border-radius:8px"><br><button class="btn-main btn-outline" style="margin-top:10px" onclick="copyPix()">COPIAR CÓDIGO</button></div><button class="close-btn" onclick="closeModal('deposit-modal')">FECHAR</button></div></div>
-    <div id="withdraw-modal" class="overlay hidden"><div class="modal"><h2>💸 Sacar</h2><input type="number" id="with-amount" placeholder="Valor"><select id="pix-type"><option value="cpf">CPF</option><option value="email">Email</option></select><input type="text" id="pix-key" placeholder="Chave Pix"><button class="btn-main btn-primary" onclick="requestWithdraw()">SOLICITAR</button><button class="close-btn" onclick="closeModal('withdraw-modal')">FECHAR</button></div></div>
+    <div id="register-modal" class="overlay hidden">
+        <div class="modal">
+            <h2>🚀 Criar Conta</h2>
+            <div class="input-group"><label>Nome Completo</label><input type="text" id="reg-name"></div>
+            <div class="input-group"><label>CPF</label><input type="tel" id="reg-cpf" maxlength="14"></div>
+            <div class="input-group"><label>Telefone</label><input type="tel" id="reg-phone"></div>
+            <div class="input-group"><label>Senha</label><input type="password" id="reg-pass"></div>
+            <input type="hidden" id="reg-ref">
+            <button class="btn-main btn-primary" onclick="register()">CADASTRAR</button>
+            <div style="margin-top:15px"><span onclick="showLogin()" style="cursor:pointer;color:var(--text-muted);font-size:12px">Já tenho conta</span></div>
+        </div>
+    </div>
+
+    <div id="recover-modal" class="overlay hidden">
+        <div class="modal">
+            <h2>🔑 Recuperar</h2>
+            <input type="tel" id="rec-cpf" placeholder="CPF">
+            <input type="text" id="rec-name" placeholder="Nome">
+            <input type="tel" id="rec-phone" placeholder="Telefone">
+            <input type="password" id="rec-newpass" placeholder="Nova Senha">
+            <button class="btn-main btn-primary" onclick="resetPassword()">ALTERAR SENHA</button>
+            <div style="margin-top:15px"><span onclick="showLogin()" style="cursor:pointer;color:var(--text-muted)">Voltar</span></div>
+        </div>
+    </div>
+
+    <div id="deposit-modal" class="overlay hidden"><div class="modal"><h2>💰 Depositar</h2><input type="number" id="dep-amount" placeholder="Valor (Ex: 20.00)"><button class="btn-main btn-primary" onclick="generatePix()">GERAR PIX</button><button class="btn-main" style="background:#00a8ff;margin-top:10px" onclick="simulateDeposit()">⚡ SIMULAR</button><div id="pix-area" class="hidden" style="margin-top:15px"><img id="qr-img" src="" style="width:200px;border:2px solid white;border-radius:8px"><br><button class="btn-main btn-outline" style="margin-top:10px" onclick="copyPix()">COPIAR CÓDIGO</button></div><button class="close-btn" style="margin-top:15px; border:none; color:#ff4d4d; background:transparent; cursor:pointer" onclick="closeModal('deposit-modal')">FECHAR</button></div></div>
+    <div id="withdraw-modal" class="overlay hidden"><div class="modal"><h2>💸 Sacar</h2><input type="number" id="with-amount" placeholder="Valor"><select id="pix-type"><option value="cpf">CPF</option><option value="email">Email</option></select><input type="text" id="pix-key" placeholder="Chave Pix"><button class="btn-main btn-primary" onclick="requestWithdraw()">SOLICITAR</button><button class="close-btn" style="margin-top:15px; border:none; color:#ff4d4d; background:transparent; cursor:pointer" onclick="closeModal('withdraw-modal')">FECHAR</button></div></div>
     <div id="profile-modal" class="overlay hidden"><div class="modal" style="max-width:500px"><h2>📜 Extrato</h2><div style="max-height:300px;overflow-y:auto"><table style="width:100%;font-size:12px;text-align:left;color:#b1bad3"><thead><tr><th>Tipo</th><th>Valor</th><th>Status</th><th>Data</th></tr></thead><tbody id="transaction-list"></tbody></table></div><button class="btn-main btn-outline" style="margin-top:10px" onclick="closeModal('profile-modal')">FECHAR</button></div></div>
 
     <div class="sidebar">
         <div class="logo-area">💎 Mines Pix</div>
+        
         <div class="user-card">
-            <div class="user-card-header"><span>Olá,</span><button class="btn-extrato" onclick="openModal('profile-modal')">EXTRATO</button></div>
+            <div class="user-card-header">
+                <span>Olá,</span>
+                <button class="btn-extrato" onclick="openModal('profile-modal')" title="Ver Extrato">EXTRATO</button>
+            </div>
             <div class="user-card-name" id="user-name-display">Visitante</div>
             <div style="font-size:11px; color:#55657e; margin-top:2px">CPF: <span id="user-cpf-display">...</span></div>
         </div>
+
         <button class="btn-main btn-bonus" onclick="claimBonus()">🎁 BÔNUS DIÁRIO</button>
         <button class="btn-main btn-outline" onclick="openModal('affiliate-modal')" style="margin-bottom:5px">🤝 AFILIADOS</button>
         <button class="btn-main btn-outline" onclick="openModal('ranking-modal')">🏆 RANKING</button>
+        
         <div style="margin-top: auto"></div>
-        <div class="input-group"><label>Valor</label><div class="input-wrapper"><input type="number" id="betAmount" value="5.00"><div class="input-actions"><button onclick="adjustBet(0.5)">½</button><button onclick="adjustBet(2)">2x</button></div></div></div>
-        <div class="input-group"><label>Minas</label><div class="input-wrapper"><select id="minesCount"><option value="3">3 Minas</option><option value="5">5 Minas</option><option value="10">10 Minas</option></select></div></div>
+
+        <div class="input-group">
+            <label>Valor da Aposta</label>
+            <div class="input-wrapper">
+                <input type="number" id="betAmount" value="5.00">
+                <div class="input-actions">
+                    <button onclick="adjustBet(0.5)">½</button>
+                    <button onclick="adjustBet(2)">2x</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label>Minas</label>
+            <div class="input-wrapper">
+                <select id="minesCount">
+                    <option value="3">3 Minas</option>
+                    <option value="5">5 Minas</option>
+                    <option value="10">10 Minas</option>
+                    <option value="20">20 Minas</option>
+                </select>
+            </div>
+        </div>
+
         <button class="btn-main btn-primary" id="action-btn" onclick="handleAction()">COMEÇAR JOGO</button>
-        <div class="finance-row"><button class="btn-main btn-outline" style="background:#00e701; color:black; border:none" onclick="openModal('deposit-modal')">DEPOSITAR</button><button class="btn-main btn-outline" onclick="openModal('withdraw-modal')">SACAR</button></div>
+        
+        <div class="finance-row">
+            <button class="btn-main btn-outline" style="background:#00e701; color:black; border:none" onclick="openModal('deposit-modal')">DEPOSITAR</button>
+            <button class="btn-main btn-outline" onclick="openModal('withdraw-modal')">SACAR</button>
+        </div>
     </div>
 
     <div class="game-area">
         <div class="game-content">
-            <div class="balance-badge">R$ <span id="balance">0.00</span></div>
+            <div class="balance-badge">
+                R$ <span id="balance">0.00</span>
+            </div>
             
             <div class="grid-container" id="grid-container">
                 <div class="grid" id="grid"></div>
             </div>
             
-            <div class="stats-bar"><div id="multiplier-display">1.00x</div><div id="message-display">Faça sua aposta</div></div>
+            <div class="stats-bar">
+                <div id="multiplier-display">1.00x</div>
+                <div id="message-display">Faça sua aposta</div>
+            </div>
         </div>
+
         <div class="footer">
-            <div class="footer-logos"><span class="footer-badge">🔞 +18</span><span class="footer-badge">🔒 SSL Seguro</span></div>
-            <div class="footer-links"><span onclick="openModal('terms-modal')">Termos</span><span onclick="openModal('privacy-modal')">Privacidade</span><span onclick="openModal('responsible-modal')">Responsável</span><span onclick="openModal('support-modal')">Suporte</span></div>
-            <p style="opacity:0.5; margin-top:15px">Mines Pix © 2024. Todos os direitos reservados.</p>
+            <div class="footer-logos">
+                <span class="footer-badge">🔞 +18</span>
+                <span class="footer-badge">🔒 SSL Seguro</span>
+            </div>
+            <div class="footer-links">
+                <span onclick="openModal('terms-modal')">Termos</span>
+                <span onclick="openModal('privacy-modal')">Privacidade</span>
+                <span onclick="openModal('responsible-modal')">Responsável</span>
+                <span onclick="openModal('support-modal')">Suporte</span>
+            </div>
+            <p style="opacity:0.5; margin-top:15px">
+                Mines Pix © 2024. Todos os direitos reservados.<br>
+                Plataforma operada sob licença internacional.
+            </p>
         </div>
+
         <div class="live-feed"><div class="feed-item" id="live-feed-content"></div></div>
     </div>
 
