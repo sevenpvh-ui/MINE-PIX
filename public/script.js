@@ -43,15 +43,9 @@ function showRecover() { document.getElementById('auth-screen').classList.add('h
 function openModal(id) { playSound('click'); document.getElementById(id).classList.remove('hidden'); if(id==='profile-modal') loadTransactions(); if(id==='affiliate-modal') loadAffiliateStats(); if(id==='ranking-modal') loadRanking(); }
 function closeModal(id) { playSound('click'); document.getElementById(id).classList.add('hidden'); }
 
-// --- FUNÇÃO NOVA PARA SELECIONAR TIPO DE PIX ---
 function selectPixType(type) {
-    // Atualiza o input oculto
     document.getElementById('pix-type').value = type;
-    
-    // Atualiza visual dos botões
-    document.querySelectorAll('.pix-type-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
+    document.querySelectorAll('.pix-type-btn').forEach(btn => btn.classList.remove('active'));
     event.target.classList.add('active');
 }
 
@@ -131,11 +125,20 @@ async function loadAffiliateStats() {
     try {
         const res = await fetch(`/api/affiliates/stats/${currentUser.userId}`);
         const data = await res.json();
-        document.getElementById('aff-earnings').innerText = `R$ ${data.earnings.toFixed(2)}`;
-        document.getElementById('aff-count').innerText = data.count;
-        document.getElementById('aff-link').value = data.link;
+        
+        const earningsEl = document.getElementById('aff-earnings');
+        if (earningsEl) earningsEl.innerText = `R$ ${Number(data.earnings).toFixed(2)}`;
+
+        const linkEl = document.getElementById('aff-link');
+        if (linkEl) {
+            linkEl.value = data.link;
+            // Garante que o texto fique visível
+            linkEl.style.color = "white";
+            linkEl.style.opacity = "1";
+        }
     } catch(e) {}
 }
+
 function copyAffiliateLink() { playSound('click'); const c=document.getElementById("aff-link"); c.select(); document.execCommand("copy"); showToast("Link copiado!"); }
 
 async function claimBonus() {
@@ -149,7 +152,7 @@ async function claimBonus() {
 }
 
 function startLiveFeed() {
-    const names = ["João", "Pedro", "Maria", "Lucas", "Ana", "Carlos", "Bia"];
+    const names = ["João", "Pedro", "Maria", "Lucas", "Ana", "Carlos"];
     const feedEl = document.getElementById('live-feed-content');
     setInterval(() => {
         const name = names[Math.floor(Math.random() * names.length)] + "***";
@@ -204,10 +207,7 @@ async function requestWithdraw() {
     playSound('click');
     const amount = document.getElementById('with-amount').value;
     const pixKey = document.getElementById('pix-key').value;
-    
-    // PEGA O VALOR DO TIPO DE PIX (Corrigido)
     const pixKeyType = document.getElementById('pix-type').value;
-    
     const res = await fetch('/api/payment/withdraw', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: currentUser.userId, amount, pixKey, pixKeyType }) });
     const data = await res.json();
     if(res.ok) { showToast("Solicitado!"); closeModal('withdraw-modal'); updateBalance(); } else { showToast(data.error, 'error'); }
@@ -242,7 +242,6 @@ async function handleAction() {
         const res = await fetch('/api/game/start', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({userId: currentUser.userId, betAmount: bet, minesCount: mines}) });
         const data = await res.json();
         if(data.error) return showToast(data.error, 'error');
-        
         isPlaying = true; updateBalance(); renderGrid(false); btn.innerText = "RETIRAR (Cashout)"; btn.classList.add('cashout-mode'); multEl.innerText = "1.00x";
     } else {
         const res = await fetch('/api/game/cashout', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({userId: currentUser.userId}) });
@@ -254,7 +253,6 @@ async function handleAction() {
 async function playRound(index, cellBtn) {
     const res = await fetch('/api/game/play', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({userId: currentUser.userId, index}) });
     const data = await res.json();
-    
     if(data.status === 'safe') {
         playSound('diamond');
         multEl.innerText = `${data.multiplier}x`;
@@ -265,25 +263,14 @@ async function playRound(index, cellBtn) {
         playSound('bomb');
         cellBtn.innerHTML = '<img src="bomb.png" style="width:95%; transform:scale(1.5)">';
         cellBtn.classList.add('boom'); 
-        
         const container = document.getElementById('grid-container');
-        if (container) {
-            container.classList.remove('shake-anim'); 
-            void container.offsetWidth; 
-            container.classList.add('shake-anim');
-        }
-        
+        if (container) { container.classList.remove('shake-anim'); void container.offsetWidth; container.classList.add('shake-anim'); }
         finishGame(false, 0, data.grid);
     }
 }
 
 function finishGame(win, amount, fullGrid) {
-    isPlaying = false; 
-    btn.innerText = "COMEÇAR JOGO"; 
-    btn.classList.remove('cashout-mode'); 
-    btn.disabled = false; 
-    updateBalance();
-    
+    isPlaying = false; btn.innerText = "COMEÇAR JOGO"; btn.classList.remove('cashout-mode'); btn.disabled = false; updateBalance();
     try {
         const cells = document.querySelectorAll('.cell');
         fullGrid.forEach((type, i) => {
@@ -292,6 +279,5 @@ function finishGame(win, amount, fullGrid) {
             if(type === 'diamond') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="diamond.png" style="width:95%; transform:scale(1.5); opacity:0.5">';
         });
     } catch(e) { console.error("Erro ao revelar grid", e); }
-
     if(win) { playSound('win'); showToast(`GANHOU R$ ${amount}!`); confetti(); } else { showToast("Você perdeu!", 'error'); }
 }
