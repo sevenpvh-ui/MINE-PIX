@@ -6,42 +6,40 @@ const balanceEl = document.getElementById('balance');
 const msgEl = document.getElementById('message-display');
 const multEl = document.getElementById('multiplier-display');
 const btn = document.getElementById('action-btn');
+const authMsg = document.getElementById('auth-msg');
+
+// Tenta pegar código de indicação da URL (ex: ?ref=JOAO)
+const urlParams = new URLSearchParams(window.location.search);
+const refCodeFromUrl = urlParams.get('ref');
+if(refCodeFromUrl) {
+    document.getElementById('reg-ref').value = refCodeFromUrl;
+    showRegister(); // Abre registro direto
+}
 
 startLiveFeed();
 
 // --- TELAS ---
-function showRegister() {
-    document.getElementById('auth-screen').classList.add('hidden');
-    document.getElementById('register-modal').classList.remove('hidden');
-}
-function showLogin() {
-    document.getElementById('register-modal').classList.add('hidden');
-    document.getElementById('auth-screen').classList.remove('hidden');
-}
+function showRegister() { document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('register-modal').classList.remove('hidden'); }
+function showLogin() { document.getElementById('register-modal').classList.add('hidden'); document.getElementById('auth-screen').classList.remove('hidden'); }
 function showMsg(id, msg) { const el = document.getElementById(id); el.innerText = msg; setTimeout(()=>el.innerText="", 3000); }
 
 // --- AUTENTICAÇÃO ---
 async function login() {
     const cpf = document.getElementById('login-cpf').value;
     const password = document.getElementById('login-pass').value;
-    if(!cpf || !password) return showMsg('login-msg', "Preencha CPF e Senha");
+    if(!cpf || !password) return showMsg('login-msg', "Preencha tudo");
 
     try {
-        const res = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ cpf, password })
-        });
+        const res = await fetch('/api/auth/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({cpf, password}) });
         const data = await res.json();
-        
         if(res.ok) {
             currentUser = data;
             document.getElementById('auth-screen').classList.add('hidden');
             document.getElementById('user-cpf-display').innerText = data.cpf;
             updateBalance();
             initGame();
-        } else { showMsg('login-msg', data.error || "Erro ao entrar"); }
-    } catch (error) { showMsg('login-msg', "Erro de conexão"); }
+        } else { showMsg('login-msg', data.error); }
+    } catch (error) { showMsg('login-msg', "Erro conexão"); }
 }
 
 async function register() {
@@ -49,6 +47,7 @@ async function register() {
     const cpf = document.getElementById('reg-cpf').value;
     const phone = document.getElementById('reg-phone').value;
     const password = document.getElementById('reg-pass').value;
+    const refCode = document.getElementById('reg-ref').value; // Pega indicação
 
     if(!name || !cpf || !phone || !password) return showMsg('reg-msg', "Preencha tudo!");
 
@@ -56,24 +55,42 @@ async function register() {
         const res = await fetch('/api/auth/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, cpf, phone, password })
+            body: JSON.stringify({ name, cpf, phone, password, refCode })
         });
         const data = await res.json();
         if(res.ok) {
-            alert("✅ Conta criada! Bem-vindo " + name);
-            currentUser = data;
-            document.getElementById('register-modal').classList.add('hidden');
-            document.getElementById('user-cpf-display').innerText = data.cpf;
-            updateBalance();
-            initGame();
+            alert("Conta criada!");
+            login(); 
         } else { showMsg('reg-msg', data.error); }
-    } catch (error) { showMsg('reg-msg', "Erro ao registrar"); }
+    } catch (error) { showMsg('reg-msg', "Erro registro"); }
+}
+
+// --- AFILIADOS (NOVO) ---
+function openModal(id) { 
+    document.getElementById(id).classList.remove('hidden'); 
+    if(id==='profile-modal') loadTransactions();
+    if(id==='affiliate-modal') loadAffiliateStats();
+}
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+async function loadAffiliateStats() {
+    try {
+        const res = await fetch(`/api/affiliates/stats/${currentUser.userId}`);
+        const data = await res.json();
+        document.getElementById('aff-earnings').innerText = `R$ ${data.earnings.toFixed(2)}`;
+        document.getElementById('aff-count').innerText = data.count;
+        document.getElementById('aff-link').value = data.link;
+    } catch(e) { console.error(e); }
+}
+
+function copyAffiliateLink() {
+    const copyText = document.getElementById("aff-link");
+    copyText.select();
+    document.execCommand("copy");
+    alert("Link copiado! Envie para seus amigos.");
 }
 
 // --- EXTRAS E FINANCEIRO ---
-function openModal(id) { document.getElementById(id).classList.remove('hidden'); if(id==='profile-modal') loadTransactions(); }
-function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
-
 async function claimBonus() {
     if(!currentUser) return;
     try {
@@ -84,7 +101,7 @@ async function claimBonus() {
 }
 
 function startLiveFeed() {
-    const names = ["João", "Pedro", "Maria", "Lucas", "Ana", "Carlos"];
+    const names = ["João", "Pedro", "Maria", "Lucas", "Ana"];
     const feedEl = document.getElementById('live-feed-content');
     setInterval(() => {
         const name = names[Math.floor(Math.random() * names.length)] + "***";
@@ -99,7 +116,7 @@ function startLiveFeed() {
 
 async function loadTransactions() {
     const tbody = document.getElementById('transaction-list');
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center">Carregando...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4">Carregando...</td></tr>';
     const res = await fetch(`/api/me/transactions/${currentUser.userId}`);
     const data = await res.json();
     tbody.innerHTML = '';
@@ -107,7 +124,9 @@ async function loadTransactions() {
     data.forEach(t => {
         const date = new Date(t.createdAt).toLocaleDateString('pt-BR');
         let color = t.status === 'approved' ? '#00e701' : 'orange';
-        tbody.innerHTML += `<tr style="border-bottom:1px solid #333"><td style="padding:8px">${t.type}</td><td>R$ ${t.amount.toFixed(2)}</td><td style="color:${color}">${t.status}</td><td style="color:#777">${date}</td></tr>`;
+        // Mostra "Comissão" se for affiliate
+        let typeShow = t.type === 'commission' ? 'Comissão' : t.type;
+        tbody.innerHTML += `<tr style="border-bottom:1px solid #333"><td style="padding:8px">${typeShow}</td><td>R$ ${t.amount.toFixed(2)}</td><td style="color:${color}">${t.status}</td><td style="color:#777">${date}</td></tr>`;
     });
 }
 
@@ -178,10 +197,10 @@ async function playRound(index, cellBtn) {
     const res = await fetch('/api/game/play', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({userId: currentUser.userId, index}) });
     const data = await res.json();
     if(data.status === 'safe') {
-        cellBtn.innerHTML = '<img src="diamond.png" style="width:180%; drop-shadow: 0 0 5px #00e701;" onerror="this.parentNode.innerText=\'💎\'">';
+        cellBtn.innerHTML = '<img src="diamond.png" style="width:95%; drop-shadow: 0 0 5px #00e701;" onerror="this.parentNode.innerText=\'💎\'">';
         cellBtn.classList.add('revealed', 'safe'); cellBtn.disabled = true; multEl.innerText = `${data.multiplier}x`; btn.innerText = `RETIRAR R$ ${data.potentialWin}`;
     } else if(data.status === 'boom') {
-        cellBtn.innerHTML = '<img src="bomb.png" style="width:180%;" onerror="this.parentNode.innerText=\'💣\'">';
+        cellBtn.innerHTML = '<img src="bomb.png" style="width:95%;" onerror="this.parentNode.innerText=\'💣\'">';
         cellBtn.classList.add('boom'); document.getElementById('grid-container').classList.add('shake-anim');
         setTimeout(()=> document.getElementById('grid-container').classList.remove('shake-anim'), 400);
         finishGame(false, 0, data.grid);
@@ -193,8 +212,8 @@ function finishGame(win, amount, fullGrid) {
     const cells = document.querySelectorAll('.cell');
     fullGrid.forEach((type, i) => {
         cells[i].disabled = true; cells[i].classList.add('revealed');
-        if(type === 'mine') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="bomb.png" style="width:180%; opacity:0.5">';
-        if(type === 'diamond') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="diamond.png" style="width:180%; opacity:0.5">';
+        if(type === 'mine') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="bomb.png" style="width:95%; opacity:0.5">';
+        if(type === 'diamond') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="diamond.png" style="width:95%; opacity:0.5">';
     });
     if(win) { msgEl.innerHTML = `<span style="color:#00e701">GANHOU R$ ${amount}</span>`; confetti(); } else { msgEl.innerHTML = `<span style="color:red">PERDEU!</span>`; }
 }
