@@ -181,9 +181,9 @@ function finishGame(win, amount, fullGrid) {
     fullGrid.forEach((type, i) => {
         cells[i].disabled = true; cells[i].classList.add('revealed');
         // AQUI MUDAMOS PARA 95%
-        if(type === 'mine') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="bomb.png" style="width:95%; opacity:0.5">';
+        if(type === 'mine') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="bomb.png" style="width:120%; opacity:0.5">';
         // AQUI MUDAMOS PARA 95%
-        if(type === 'diamond') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="diamond.png" style="width:95%; opacity:0.5">';
+        if(type === 'diamond') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="diamond.png" style="width:120%; opacity:0.5">';
     });
     if(win) { msgEl.innerHTML = `<span style="color:#00e701">GANHOU R$ ${amount}</span>`; confetti(); } else { msgEl.innerHTML = `<span style="color:red">PERDEU!</span>`; }
 }
