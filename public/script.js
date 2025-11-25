@@ -14,13 +14,7 @@ const sounds = {
     win: new Audio('win.mp3') 
 };
 
-function playSound(name) { 
-    try { 
-        const s = sounds[name].cloneNode(); 
-        s.volume = 0.5; 
-        s.play().catch(()=>{}); 
-    } catch(e){ console.error("Erro som", e); } 
-}
+function playSound(name) { try { const s = sounds[name].cloneNode(); s.volume = 0.5; s.play().catch(()=>{}); } catch(e){} }
 
 const urlParams = new URLSearchParams(window.location.search);
 const refCodeFromUrl = urlParams.get('ref');
@@ -28,7 +22,7 @@ if(refCodeFromUrl) { document.getElementById('reg-ref').value = refCodeFromUrl; 
 
 startLiveFeed();
 
-// WELCOME MODAL
+// WELCOME
 setTimeout(() => { if (!currentUser) document.getElementById('welcome-modal').classList.remove('hidden'); }, 500);
 function showRegisterFromWelcome() { document.getElementById('welcome-modal').classList.add('hidden'); showRegister(); }
 function showLoginFromWelcome() { document.getElementById('welcome-modal').classList.add('hidden'); showLogin(); }
@@ -66,7 +60,7 @@ async function login() {
             if(data.name) document.getElementById('user-name-display').innerText = data.name.split(' ')[0];
             updateBalance(); initGame(); showToast(`Bem-vindo, ${data.name.split(' ')[0]}!`);
         } else { showToast(data.error, 'error'); }
-    } catch (error) { showToast("Erro de conexão", 'error'); }
+    } catch (error) { showToast("Erro conexão", 'error'); }
 }
 
 async function register() {
@@ -143,7 +137,7 @@ async function claimBonus() {
 }
 
 function startLiveFeed() {
-    const names = ["João", "Pedro", "Maria", "Lucas", "Ana", "Carlos"];
+    const names = ["João", "Pedro", "Maria", "Lucas", "Ana", "Carlos", "Bia"];
     const feedEl = document.getElementById('live-feed-content');
     setInterval(() => {
         const name = names[Math.floor(Math.random() * names.length)] + "***";
@@ -156,7 +150,6 @@ function startLiveFeed() {
     }, 3000);
 }
 
-// FINANCEIRO
 async function loadTransactions() {
     const tbody = document.getElementById('transaction-list');
     tbody.innerHTML = '<tr><td colspan="4">Carregando...</td></tr>';
@@ -233,7 +226,6 @@ async function handleAction() {
         const res = await fetch('/api/game/start', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({userId: currentUser.userId, betAmount: bet, minesCount: mines}) });
         const data = await res.json();
         if(data.error) return showToast(data.error, 'error');
-        
         isPlaying = true; updateBalance(); renderGrid(false); btn.innerText = "RETIRAR (Cashout)"; btn.classList.add('cashout-mode'); multEl.innerText = "1.00x";
     } else {
         const res = await fetch('/api/game/cashout', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({userId: currentUser.userId}) });
@@ -257,31 +249,30 @@ async function playRound(index, cellBtn) {
         cellBtn.innerHTML = '<img src="bomb.png" style="width:95%; transform:scale(1.5)">';
         cellBtn.classList.add('boom'); 
         
-        // ANIMAÇÃO SHAKE E FORÇA RESET
+        // CORREÇÃO CRÍTICA DO ERRO DO CLASSLIST
         const container = document.getElementById('grid-container');
-        container.classList.remove('shake-anim'); void container.offsetWidth; container.classList.add('shake-anim');
+        if (container) {
+            container.classList.remove('shake-anim'); 
+            void container.offsetWidth; 
+            container.classList.add('shake-anim');
+        }
         
         finishGame(false, 0, data.grid);
     }
 }
 
 function finishGame(win, amount, fullGrid) {
-    // --- CORREÇÃO CRÍTICA: RESET DO BOTÃO PRIMEIRO ---
     isPlaying = false; 
-    btn.innerText = "COMEÇAR JOGO"; 
-    btn.classList.remove('cashout-mode');
-    btn.disabled = false; // Garante que o botão não fique travado
+    btn.innerText = "COMEÇAR JOGO"; // RESET FORÇADO
+    btn.classList.remove('cashout-mode'); 
+    btn.disabled = false; // DESTROVA
     updateBalance();
     
-    // Tenta revelar o grid, se der erro, o botão já está salvo
-    try {
-        const cells = document.querySelectorAll('.cell');
-        fullGrid.forEach((type, i) => {
-            cells[i].disabled = true; cells[i].classList.add('revealed');
-            if(type === 'mine') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="bomb.png" style="width:95%; transform:scale(1.5); opacity:0.5">';
-            if(type === 'diamond') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="diamond.png" style="width:95%; transform:scale(1.5); opacity:0.5">';
-        });
-    } catch(e) { console.error("Erro ao revelar grid", e); }
-
+    const cells = document.querySelectorAll('.cell');
+    fullGrid.forEach((type, i) => {
+        cells[i].disabled = true; cells[i].classList.add('revealed');
+        if(type === 'mine') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="bomb.png" style="width:95%; transform:scale(1.5); opacity:0.5">';
+        if(type === 'diamond') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="diamond.png" style="width:95%; transform:scale(1.5); opacity:0.5">';
+    });
     if(win) { playSound('win'); showToast(`GANHOU R$ ${amount}!`); confetti(); } else { showToast("Você perdeu!", 'error'); }
 }
