@@ -1,22 +1,28 @@
 const mongoose = require('mongoose');
 
 const UserSchema = new mongoose.Schema({
+    // Dados Pessoais
     name: { type: String, required: true },
     phone: { type: String, required: true },
     cpf: { type: String, required: true, unique: true },
     password: { type: String, required: true },
+    
+    // Financeiro
     balance: { type: Number, default: 0.00 },
-    lastDailyBonus: { type: Date, default: null },
-
-    // --- SISTEMA DE AFILIADOS ---
-    affiliateCode: { type: String, unique: true }, // Código único do usuário (ex: JOAO123)
-    referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Quem indicou esse usuário
-    affiliateEarnings: { type: Number, default: 0.00 }, // Total ganho com indicações
-    referralCount: { type: Number, default: 0 }, // Quantas pessoas indicou
-
     pixKey: { type: String, default: '' },
     pixKeyType: { type: String, default: '' },
 
+    // Controle de Acesso (NOVO)
+    isBanned: { type: Boolean, default: false }, // True = Bloqueado
+    lastDailyBonus: { type: Date, default: null },
+
+    // Sistema de Afiliados
+    affiliateCode: { type: String, unique: true },
+    referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    affiliateEarnings: { type: Number, default: 0.00 },
+    referralCount: { type: Number, default: 0 },
+
+    // Estado do Jogo
     activeGame: {
         grid: [String],
         revealed: [Boolean],
@@ -27,8 +33,9 @@ const UserSchema = new mongoose.Schema({
         isGameOver: { type: Boolean, default: true }
     },
 
+    // Histórico
     transactions: [{
-        type: { type: String, enum: ['deposit', 'withdraw', 'bonus', 'commission'] }, // Adicionado 'commission'
+        type: { type: String, enum: ['deposit', 'withdraw', 'bonus', 'commission', 'admin_adjustment'] },
         amount: Number,
         status: { type: String, enum: ['pending', 'approved', 'rejected'] },
         mpPaymentId: String,
