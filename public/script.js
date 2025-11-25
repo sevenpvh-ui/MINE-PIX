@@ -7,8 +7,20 @@ const msgEl = document.getElementById('message-display');
 const multEl = document.getElementById('multiplier-display');
 const btn = document.getElementById('action-btn');
 
-const sounds = { click: new Audio('click.mp3'), diamond: new Audio('diamond.mp3'), bomb: new Audio('bomb.mp3'), win: new Audio('win.mp3') };
-function playSound(name) { try { const s = sounds[name].cloneNode(); s.volume=0.5; s.play().catch(()=>{}); } catch(e){} }
+const sounds = { 
+    click: new Audio('click.mp3'), 
+    diamond: new Audio('diamond.mp3'), 
+    bomb: new Audio('bomb.mp3'), 
+    win: new Audio('win.mp3') 
+};
+
+function playSound(name) { 
+    try { 
+        const s = sounds[name].cloneNode(); 
+        s.volume = 0.5; 
+        s.play().catch(()=>{}); 
+    } catch(e){ console.error("Erro som", e); } 
+}
 
 const urlParams = new URLSearchParams(window.location.search);
 const refCodeFromUrl = urlParams.get('ref');
@@ -16,25 +28,11 @@ if(refCodeFromUrl) { document.getElementById('reg-ref').value = refCodeFromUrl; 
 
 startLiveFeed();
 
-// --- LÓGICA DE BOAS VINDAS ---
-// Se não tiver usuário logado, mostra o modal Blaze
-setTimeout(() => {
-    if (!currentUser) {
-        document.getElementById('welcome-modal').classList.remove('hidden');
-    }
-}, 500); // Pequeno delay para carregar a página
+// WELCOME MODAL
+setTimeout(() => { if (!currentUser) document.getElementById('welcome-modal').classList.remove('hidden'); }, 500);
+function showRegisterFromWelcome() { document.getElementById('welcome-modal').classList.add('hidden'); showRegister(); }
+function showLoginFromWelcome() { document.getElementById('welcome-modal').classList.add('hidden'); showLogin(); }
 
-function showRegisterFromWelcome() {
-    document.getElementById('welcome-modal').classList.add('hidden');
-    showRegister();
-}
-
-function showLoginFromWelcome() {
-    document.getElementById('welcome-modal').classList.add('hidden');
-    showLogin();
-}
-
-// --- TOAST ---
 function showToast(msg, type='success') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
@@ -44,25 +42,18 @@ function showToast(msg, type='success') {
     setTimeout(() => { toast.style.animation = 'fadeOut 0.5s forwards'; setTimeout(() => toast.remove(), 500); }, 3000);
 }
 
-// --- TELAS ---
 function showRegister() { document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('register-modal').classList.remove('hidden'); }
 function showLogin() { document.getElementById('register-modal').classList.add('hidden'); document.getElementById('recover-modal').classList.add('hidden'); document.getElementById('auth-screen').classList.remove('hidden'); }
 function showRecover() { document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('recover-modal').classList.remove('hidden'); }
 
-function openModal(id) { 
-    playSound('click');
-    document.getElementById(id).classList.remove('hidden'); 
-    if(id==='profile-modal') loadTransactions();
-    if(id==='affiliate-modal') loadAffiliateStats();
-    if(id==='ranking-modal') loadRanking();
-}
+function openModal(id) { playSound('click'); document.getElementById(id).classList.remove('hidden'); if(id==='profile-modal') loadTransactions(); if(id==='affiliate-modal') loadAffiliateStats(); if(id==='ranking-modal') loadRanking(); }
 function closeModal(id) { playSound('click'); document.getElementById(id).classList.add('hidden'); }
 
-// --- AUTH ---
+// AUTH
 async function login() {
     const cpf = document.getElementById('login-cpf').value;
     const password = document.getElementById('login-pass').value;
-    if(!cpf || !password) return showToast("Preencha CPF e Senha", 'error');
+    if(!cpf || !password) return showToast("Preencha tudo", 'error');
     playSound('click');
     try {
         const res = await fetch('/api/auth/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({cpf, password}) });
@@ -70,12 +61,10 @@ async function login() {
         if(res.ok) {
             currentUser = data;
             document.getElementById('auth-screen').classList.add('hidden');
-            document.getElementById('welcome-modal').classList.add('hidden'); // Garante que fecha o welcome
+            document.getElementById('welcome-modal').classList.add('hidden');
             document.getElementById('user-cpf-display').innerText = data.cpf;
             if(data.name) document.getElementById('user-name-display').innerText = data.name.split(' ')[0];
-            updateBalance();
-            initGame();
-            showToast(`Bem-vindo, ${data.name.split(' ')[0]}!`);
+            updateBalance(); initGame(); showToast(`Bem-vindo, ${data.name.split(' ')[0]}!`);
         } else { showToast(data.error, 'error'); }
     } catch (error) { showToast("Erro de conexão", 'error'); }
 }
@@ -98,8 +87,7 @@ async function register() {
             document.getElementById('welcome-modal').classList.add('hidden');
             document.getElementById('user-cpf-display').innerText = data.cpf;
             if(data.name) document.getElementById('user-name-display').innerText = data.name.split(' ')[0];
-            updateBalance();
-            initGame();
+            updateBalance(); initGame();
         } else { showToast(data.error, 'error'); }
     } catch (error) { showToast("Erro registro", 'error'); }
 }
@@ -118,7 +106,7 @@ async function resetPassword() {
     } catch(e) { showToast("Erro reset", 'error'); }
 }
 
-// --- EXTRAS ---
+// EXTRAS
 async function loadRanking() {
     const tbody = document.getElementById('ranking-list');
     tbody.innerHTML = '<tr><td colspan="3">Carregando...</td></tr>';
@@ -128,7 +116,7 @@ async function loadRanking() {
         tbody.innerHTML = '';
         data.forEach((u, index) => {
             let emoji = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : '•'));
-            tbody.innerHTML += `<tr style="border-bottom:1px solid #333; height:30px"><td>${emoji}</td><td>${u.name}</td><td style="color:#00e701;font-weight:bold">R$ ${u.balance.toFixed(2)}</td></tr>`;
+            tbody.innerHTML += `<tr style="border-bottom:1px solid rgba(255,255,255,0.1); height:30px"><td>${emoji}</td><td>${u.name}</td><td style="color:#00e701;font-weight:bold">R$ ${u.balance.toFixed(2)}</td></tr>`;
         });
     } catch(e) { tbody.innerHTML = '<tr><td colspan="3">Erro</td></tr>'; }
 }
@@ -142,7 +130,7 @@ async function loadAffiliateStats() {
         document.getElementById('aff-link').value = data.link;
     } catch(e) {}
 }
-function copyAffiliateLink() { playSound('click'); const c=document.getElementById("aff-link"); c.select(); document.execCommand("copy"); showToast("Link copiado!"); }
+function copyAffiliateLink() { playSound('click'); const c=document.getElementById("aff-link"); c.select(); document.execCommand("copy"); showToast("Copiado!"); }
 
 async function claimBonus() {
     if(!currentUser) return;
@@ -155,7 +143,7 @@ async function claimBonus() {
 }
 
 function startLiveFeed() {
-    const names = ["João", "Pedro", "Maria", "Lucas", "Ana", "Carlos", "Bia"];
+    const names = ["João", "Pedro", "Maria", "Lucas", "Ana", "Carlos"];
     const feedEl = document.getElementById('live-feed-content');
     setInterval(() => {
         const name = names[Math.floor(Math.random() * names.length)] + "***";
@@ -168,6 +156,7 @@ function startLiveFeed() {
     }, 3000);
 }
 
+// FINANCEIRO
 async function loadTransactions() {
     const tbody = document.getElementById('transaction-list');
     tbody.innerHTML = '<tr><td colspan="4">Carregando...</td></tr>';
@@ -179,7 +168,7 @@ async function loadTransactions() {
         const date = new Date(t.createdAt).toLocaleDateString('pt-BR');
         let color = t.status === 'approved' ? '#00e701' : 'orange';
         let typeShow = t.type === 'commission' ? 'Comissão' : (t.type === 'bonus' ? 'Bônus' : t.type);
-        tbody.innerHTML += `<tr style="border-bottom:1px solid #333"><td style="padding:8px">${typeShow}</td><td>R$ ${t.amount.toFixed(2)}</td><td style="color:${color}">${t.status}</td><td style="color:#777">${date}</td></tr>`;
+        tbody.innerHTML += `<tr style="border-bottom:1px solid rgba(255,255,255,0.1)"><td style="padding:8px">${typeShow}</td><td>R$ ${t.amount.toFixed(2)}</td><td style="color:${color}">${t.status}</td><td style="color:#777">${date}</td></tr>`;
     });
 }
 
@@ -196,13 +185,6 @@ async function generatePix() {
     } else { showToast(data.error, 'error'); }
 }
 
-async function simulateDeposit() {
-    playSound('click');
-    const amount = document.getElementById('dep-amount').value;
-    const res = await fetch('/api/debug/deposit', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: currentUser.userId, amount }) });
-    if(res.ok) { playSound('win'); showToast("✅ Simulado!"); updateBalance(); closeModal('deposit-modal'); } else { showToast("Erro", 'error'); }
-}
-
 function copyPix() { playSound('click'); const c=document.getElementById("copy-paste"); c.select(); document.execCommand("copy"); showToast("Copiado!"); }
 
 async function requestWithdraw() {
@@ -215,7 +197,7 @@ async function requestWithdraw() {
     if(res.ok) { showToast("Solicitado!"); closeModal('withdraw-modal'); updateBalance(); } else { showToast(data.error, 'error'); }
 }
 
-// --- JOGO ---
+// JOGO MINES
 function initGame() { renderGrid(true); btn.onclick = handleAction; }
 
 async function updateBalance() {
@@ -234,6 +216,8 @@ function renderGrid(disabled) {
     }
 }
 
+function adjustBet(m) { playSound('click'); const i = document.getElementById('betAmount'); let v = parseFloat(i.value); if(isNaN(v)) v=0; i.value = (v * m).toFixed(2); }
+
 async function handleAction() {
     playSound('click');
     if (!isPlaying) {
@@ -242,6 +226,7 @@ async function handleAction() {
         const res = await fetch('/api/game/start', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({userId: currentUser.userId, betAmount: bet, minesCount: mines}) });
         const data = await res.json();
         if(data.error) return showToast(data.error, 'error');
+        
         isPlaying = true; updateBalance(); renderGrid(false); btn.innerText = "RETIRAR (Cashout)"; btn.classList.add('cashout-mode'); multEl.innerText = "1.00x";
     } else {
         const res = await fetch('/api/game/cashout', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({userId: currentUser.userId}) });
@@ -253,35 +238,36 @@ async function handleAction() {
 async function playRound(index, cellBtn) {
     const res = await fetch('/api/game/play', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({userId: currentUser.userId, index}) });
     const data = await res.json();
-    
     if(data.status === 'safe') {
         playSound('diamond');
         multEl.innerText = `${data.multiplier}x`;
-        multEl.classList.remove('pulse-effect');
-        void multEl.offsetWidth; 
-        multEl.classList.add('pulse-effect');
-
-        cellBtn.innerHTML = '<img src="diamond.png" style="width:95%; transform:scale(1.8); drop-shadow: 0 0 5px #00e701;" onerror="this.parentNode.innerText=\'💎\'">';
-        cellBtn.classList.add('revealed', 'safe'); cellBtn.disabled = true; 
-        btn.innerText = `RETIRAR R$ ${data.potentialWin}`;
+        multEl.classList.remove('pulse-effect'); void multEl.offsetWidth; multEl.classList.add('pulse-effect');
+        cellBtn.innerHTML = '<img src="diamond.png" style="width:100%; transform:scale(1.5); drop-shadow:0 0 10px #00e701">';
+        cellBtn.classList.add('revealed', 'safe'); cellBtn.disabled = true; btn.innerText = `RETIRAR R$ ${data.potentialWin}`;
     } else if(data.status === 'boom') {
         playSound('bomb');
-        cellBtn.innerHTML = '<img src="bomb.png" style="width:95%; transform:scale(1.8);" onerror="this.parentNode.innerText=\'💣\'">';
-        cellBtn.classList.add('boom'); document.getElementById('grid-container').classList.add('shake-anim');
-        setTimeout(()=> document.getElementById('grid-container').classList.remove('shake-anim'), 400);
+        cellBtn.innerHTML = '<img src="bomb.png" style="width:100%; transform:scale(1.5)">';
+        cellBtn.classList.add('boom'); 
+        
+        // ANIMAÇÃO SHAKE E FIM DO JOGO
+        const container = document.getElementById('grid-container');
+        container.classList.remove('shake-anim'); void container.offsetWidth; container.classList.add('shake-anim');
+        
         finishGame(false, 0, data.grid);
     }
 }
 
 function finishGame(win, amount, fullGrid) {
-    isPlaying = false; btn.innerText = "COMEÇAR"; btn.classList.remove('cashout-mode'); updateBalance();
+    isPlaying = false; 
+    btn.innerText = "COMEÇAR JOGO"; // Reseta o botão
+    btn.classList.remove('cashout-mode'); 
+    updateBalance();
+    
     const cells = document.querySelectorAll('.cell');
     fullGrid.forEach((type, i) => {
         cells[i].disabled = true; cells[i].classList.add('revealed');
-        if(type === 'mine') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="bomb.png" style="width:95%; transform:scale(1.8); opacity:0.5">';
-        if(type === 'diamond') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="diamond.png" style="width:95%; transform:scale(1.8); opacity:0.5">';
+        if(type === 'mine') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="bomb.png" style="width:100%; transform:scale(1.5); opacity:0.5">';
+        if(type === 'diamond') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="diamond.png" style="width:100%; transform:scale(1.5); opacity:0.5">';
     });
     if(win) { playSound('win'); showToast(`GANHOU R$ ${amount}!`); confetti(); } else { showToast("Você perdeu!", 'error'); }
 }
-
-function adjustBet(m) { playSound('click'); const i = document.getElementById('betAmount'); i.value = (parseFloat(i.value) * m).toFixed(2); }
