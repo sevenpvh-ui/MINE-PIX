@@ -11,12 +11,10 @@
         :root { --bg-dark: #0f1923; --bg-sidebar: #1a242d; --accent: #00e701; --danger: #ff4d4d; --tile: #2f4553; --tile-hover: #557086; --text-muted: #b1bad3; }
         body { margin: 0; background-color: var(--bg-dark); color: white; font-family: 'Segoe UI', sans-serif; display: flex; height: 100vh; overflow: hidden; }
         
-        /* Sidebar */
         .sidebar { width: 320px; background-color: var(--bg-sidebar); padding: 25px; display: flex; flex-direction: column; gap: 15px; box-shadow: 2px 0 10px rgba(0,0,0,0.3); z-index: 10; overflow-y: auto; }
         .logo-area { font-size: 24px; font-weight: bold; margin-bottom: 10px; color: white; }
         .user-info { font-size: 12px; color: var(--accent); margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 10px; font-weight: bold;}
         
-        /* Inputs e UI */
         label { font-size: 11px; color: var(--text-muted); font-weight: bold; margin-bottom: 5px; display: block; }
         input, select { background: var(--bg-dark); border: 2px solid var(--tile); color: white; padding: 12px; border-radius: 5px; width: 100%; box-sizing: border-box; font-weight: bold; outline: none; margin-bottom: 10px; }
         .input-row { display: flex; gap: 5px; }
@@ -28,7 +26,6 @@
         .dep-btn { background: #00e701; color: black; flex: 1; border: none; padding: 10px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 12px;}
         .with-btn { background: #2f4553; color: white; flex: 1; border: none; padding: 10px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 12px;}
 
-        /* Jogo & Layout */
         .game-area { flex: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; }
         .game-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; width: 100%; box-sizing: border-box; min-height: 80vh; }
         .balance-display { position: absolute; top: 30px; right: 30px; background: var(--bg-sidebar); padding: 12px 25px; border-radius: 30px; font-weight: bold; font-size: 18px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: flex; gap: 5px;}
@@ -40,7 +37,6 @@
         .cell.safe { background-color: var(--bg-dark); border: 2px solid #ed8a19; cursor: default; box-shadow: none; animation: popIn 0.3s; }
         .cell.boom { background-color: var(--danger); box-shadow: none; }
         
-        /* Footer & Feed */
         .footer { background-color: #0b1219; width: 100%; padding: 40px 20px; box-sizing: border-box; border-top: 1px solid #2f4553; text-align: center; font-size: 12px; color: #55657e; margin-top: 20px; }
         .footer-logos { display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; opacity: 0.7; }
         .footer-badge { border: 1px solid #2f4553; padding: 5px 10px; border-radius: 5px; }
@@ -49,20 +45,16 @@
         .footer-links span:hover { color: white; }
         .footer-text { max-width: 800px; margin: 0 auto; line-height: 1.6; }
         .copyright { margin-top: 20px; opacity: 0.5; font-size: 10px; }
-        
         .live-feed { width: 100%; background: rgba(0,0,0,0.8); height: 30px; display: flex; align-items: center; overflow: hidden; font-size: 11px; color: #b1bad3; border-top: 1px solid #333; margin-top: auto; }
         .feed-item { display: flex; gap: 10px; padding: 0 20px; white-space: nowrap; animation: slideLeft 20s linear infinite; }
         .feed-money { color: #00e701; font-weight: bold; }
 
-        /* Modais */
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 100; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
         .hidden { display: none !important; }
-        .modal { background: #1a242d; padding: 30px; border-radius: 15px; width: 90%; max-width: 400px; text-align: center; border: 1px solid #2f4553; animation: popIn 0.3s; }
+        .modal { background: #1a242d; padding: 30px; border-radius: 15px; width: 90%; max-width: 450px; text-align: center; border: 1px solid #2f4553; animation: popIn 0.3s; }
         .modal h2 { margin-top: 0; color: white; margin-bottom: 20px; }
-        .modal p { color: #b1bad3; font-size: 13px; margin-bottom: 15px; }
-        .modal input, .modal button { width: 100%; margin-bottom: 10px; }
-        .modal button { padding: 12px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; background: #00e701; color: black; }
-        .secondary-btn { background: #2f4553 !important; color: white !important; }
+        .modal input { width: 100%; margin-bottom: 10px; }
+        .modal button { padding: 12px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; background: #00e701; color: black; width: 100%;}
         .close-btn { background: transparent !important; color: #ff4d4d !important; border: 1px solid #ff4d4d !important; }
         
         @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
@@ -85,68 +77,46 @@
     <div id="terms-modal" class="overlay hidden">
         <div class="modal" style="max-width: 600px; text-align: left;">
             <h2 style="text-align: center;">📜 Termos de Uso</h2>
-            <div style="max-height: 300px; overflow-y: auto; font-size: 12px; color: #b1bad3; line-height: 1.6;">
-                <p><strong>1. Aceitação:</strong> Serviço exclusivo para maiores de 18 anos.</p>
-                <p><strong>2. Pagamentos:</strong> Depósitos via PIX. Saques em 24h para CPF titular.</p>
-                <p><strong>3. Regras:</strong> Uso de bots resulta em banimento.</p>
-                <p><strong>4. Riscos:</strong> Jogo de azar envolve risco financeiro.</p>
+            <div style="max-height: 300px; overflow-y: auto; font-size: 12px; color: #b1bad3;">
+                <p>1. Aceitação: Serviço exclusivo para +18.</p><p>2. Pagamentos: Via PIX.</p>
             </div>
-            <button onclick="closeModal('terms-modal')" class="close-btn" style="width:100%">FECHAR</button>
+            <button onclick="closeModal('terms-modal')" class="close-btn">FECHAR</button>
         </div>
     </div>
-
-    <div id="privacy-modal" class="overlay hidden">
-        <div class="modal" style="max-width: 600px; text-align: left;">
-            <h2 style="text-align: center;">🔒 Privacidade</h2>
-            <div style="max-height: 300px; overflow-y: auto; font-size: 12px; color: #b1bad3; line-height: 1.6;">
-                <p>Coletamos apenas CPF para validação de pagamentos. Dados criptografados e seguros.</p>
-            </div>
-            <button onclick="closeModal('privacy-modal')" class="close-btn" style="width:100%">FECHAR</button>
-        </div>
-    </div>
-
-    <div id="responsible-modal" class="overlay hidden">
-        <div class="modal" style="max-width: 600px; text-align: left;">
-            <h2 style="text-align: center;">🛡️ Jogo Responsável</h2>
-            <div style="max-height: 300px; overflow-y: auto; font-size: 12px; color: #b1bad3; line-height: 1.6;">
-                <p>O jogo é entretenimento. Nunca aposte o que não pode perder.</p>
-            </div>
-            <button onclick="closeModal('responsible-modal')" class="close-btn" style="width:100%">FECHAR</button>
-        </div>
-    </div>
-
-    <div id="support-modal" class="overlay hidden">
-        <div class="modal" style="max-width: 400px; text-align: center;">
-            <h2>🎧 Suporte</h2>
-            <p style="color: #b1bad3; margin-bottom: 20px;">Dúvidas com saques ou depósitos?</p>
-            <div style="background: #0f1923; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
-                📧 suporte@minespix.com
-            </div>
-            <button onclick="closeModal('support-modal')" class="close-btn" style="width:100%">FECHAR</button>
-        </div>
-    </div>
+    <div id="privacy-modal" class="overlay hidden"><div class="modal" style="text-align:left"><h2>🔒 Privacidade</h2><p style="color:#b1bad3">Dados seguros.</p><button onclick="closeModal('privacy-modal')" class="close-btn">FECHAR</button></div></div>
+    <div id="responsible-modal" class="overlay hidden"><div class="modal" style="text-align:left"><h2>🛡️ Jogo Responsável</h2><p style="color:#b1bad3">Não aposte o que não pode perder.</p><button onclick="closeModal('responsible-modal')" class="close-btn">FECHAR</button></div></div>
+    <div id="support-modal" class="overlay hidden"><div class="modal"><h2>🎧 Suporte</h2><p style="color:#b1bad3">suporte@minespix.com</p><button onclick="closeModal('support-modal')" class="close-btn">FECHAR</button></div></div>
 
     <div id="auth-screen" class="overlay">
         <div class="modal">
-            <h2>🔐 Acesso Mines Pix</h2>
-            <input type="tel" id="auth-cpf" placeholder="Seu CPF (Números)" maxlength="14">
-            <input type="password" id="auth-pass" placeholder="Sua Senha">
+            <h2>🔐 Entrar no Mines Pix</h2>
+            <p style="color:#b1bad3; margin-bottom:15px;">Digite seus dados para continuar</p>
+            <label style="text-align:left">CPF</label>
+            <input type="tel" id="login-cpf" placeholder="000.000.000-00" maxlength="14">
+            <label style="text-align:left">Senha</label>
+            <input type="password" id="login-pass" placeholder="Sua senha">
             <button onclick="login()">ENTRAR</button>
-            <button onclick="register()" class="secondary-btn">CRIAR CONTA</button>
-            <p id="auth-msg" style="color: red; margin-top: 10px; font-weight: bold;"></p>
+            <div style="margin-top: 15px; font-size: 13px; color: #b1bad3;">
+                Não tem conta? <span onclick="showRegister()" style="color: #00e701; cursor: pointer; font-weight: bold;">Crie agora</span>
+            </div>
+            <p id="login-msg" style="color: red; margin-top: 10px; font-weight: bold;"></p>
         </div>
     </div>
 
-    <div id="profile-modal" class="overlay hidden">
-        <div class="modal" style="max-width: 500px;">
-            <h2>📜 Extrato</h2>
-            <div style="max-height: 300px; overflow-y: auto; margin-bottom: 20px;">
-                <table style="width: 100%; font-size: 12px; text-align: left; border-collapse: collapse;">
-                    <thead><tr style="color: #b1bad3;"><th style="padding: 8px;">Tipo</th><th>Valor</th><th>Status</th><th>Data</th></tr></thead>
-                    <tbody id="transaction-list"></tbody>
-                </table>
-            </div>
-            <button onclick="closeModal('profile-modal')" class="close-btn">FECHAR</button>
+    <div id="register-modal" class="overlay hidden">
+        <div class="modal">
+            <h2>🚀 Criar Nova Conta</h2>
+            <label style="text-align:left">Nome Completo</label>
+            <input type="text" id="reg-name" placeholder="Ex: João Silva">
+            <label style="text-align:left">CPF</label>
+            <input type="tel" id="reg-cpf" placeholder="000.000.000-00" maxlength="14">
+            <label style="text-align:left">Telefone</label>
+            <input type="tel" id="reg-phone" placeholder="(00) 90000-0000">
+            <label style="text-align:left">Senha</label>
+            <input type="password" id="reg-pass" placeholder="Mínimo 6 caracteres">
+            <button onclick="register()" style="background: linear-gradient(45deg, #00e701, #00b300);">CADASTRAR</button>
+            <div style="margin-top: 15px;"><span onclick="showLogin()" style="color: #b1bad3; cursor: pointer; font-size: 12px;">Já tenho conta, quero <b>Voltar</b></span></div>
+            <p id="reg-msg" style="color: red; margin-top: 10px; font-weight: bold;"></p>
         </div>
     </div>
 
@@ -158,42 +128,23 @@
             <button onclick="simulateDeposit()" style="background: #00a8ff; color: white; margin-top: 10px;">⚡ SIMULAR PAGAMENTO</button>
             <div id="pix-area" class="hidden" style="margin-top: 15px;">
                 <img id="qr-img" src="" style="width: 200px; border: 2px solid white;">
-                <textarea id="copy-paste" rows="3" readonly style="font-size: 10px;"></textarea>
+                <textarea id="copy-paste" rows="3" readonly></textarea>
                 <button onclick="copyPix()" style="background: #2f4553; color: white;">COPIAR</button>
             </div>
             <button onclick="closeModal('deposit-modal')" class="close-btn">FECHAR</button>
         </div>
     </div>
 
-    <div id="withdraw-modal" class="overlay hidden">
-        <div class="modal">
-            <h2>💸 Sacar</h2>
-            <input type="number" id="with-amount" placeholder="Valor">
-            <select id="pix-type"><option value="cpf">CPF</option><option value="email">E-mail</option><option value="random">Chave Aleatória</option></select>
-            <input type="text" id="pix-key" placeholder="Chave PIX">
-            <button onclick="requestWithdraw()">SOLICITAR</button>
-            <button onclick="closeModal('withdraw-modal')" class="close-btn">FECHAR</button>
-        </div>
-    </div>
+    <div id="withdraw-modal" class="overlay hidden"><div class="modal"><h2>💸 Sacar</h2><input type="number" id="with-amount" placeholder="Valor"><select id="pix-type"><option value="cpf">CPF</option><option value="email">Email</option><option value="random">Aleatória</option></select><input type="text" id="pix-key" placeholder="Chave PIX"><button onclick="requestWithdraw()">SOLICITAR</button><button onclick="closeModal('withdraw-modal')" class="close-btn">FECHAR</button></div></div>
+    <div id="profile-modal" class="overlay hidden"><div class="modal" style="max-width:500px"><h2>📜 Extrato</h2><div style="max-height:300px;overflow-y:auto"><table style="width:100%;font-size:12px;text-align:left;color:#b1bad3"><thead><tr><th>Tipo</th><th>Valor</th><th>Status</th><th>Data</th></tr></thead><tbody id="transaction-list"></tbody></table></div><button onclick="closeModal('profile-modal')" class="close-btn">FECHAR</button></div></div>
 
     <div class="sidebar">
         <div class="logo-area">💎 Mines Pix</div>
-        <div class="user-info">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span>CPF: <span id="user-cpf-display">...</span></span>
-                <button onclick="openModal('profile-modal')" style="background: #2f4553; border: none; color: white; cursor: pointer; padding: 5px 10px; border-radius: 5px; font-size: 10px;">📜 EXTRATO</button>
-            </div>
-        </div>
+        <div class="user-info"><div><span>CPF: <span id="user-cpf-display">...</span></span><button onclick="openModal('profile-modal')" style="background:#2f4553;border:none;color:white;cursor:pointer;padding:5px 10px;border-radius:5px;font-size:10px">📜 EXTRATO</button></div></div>
         <button class="bonus-btn" onclick="claimBonus()">🎁 BÔNUS DIÁRIO</button>
         <div style="margin-bottom: 20px;"></div>
-        <div class="control-group">
-            <label>VALOR APOSTA</label>
-            <div class="input-row"><input type="number" id="betAmount" value="5.00"><button onclick="adjustBet(0.5)">½</button><button onclick="adjustBet(2)">2x</button></div>
-        </div>
-        <div class="control-group">
-            <label>MINAS</label>
-            <select id="minesCount"><option value="3">3 Minas</option><option value="5">5 Minas</option><option value="10">10 Minas</option></select>
-        </div>
+        <div class="control-group"><label>VALOR APOSTA</label><div class="input-row"><input type="number" id="betAmount" value="5.00"><button onclick="adjustBet(0.5)">½</button><button onclick="adjustBet(2)">2x</button></div></div>
+        <div class="control-group"><label>MINAS</label><select id="minesCount"><option value="3">3 Minas</option><option value="5">5 Minas</option><option value="10">10 Minas</option></select></div>
         <button id="action-btn">COMEÇAR</button>
         <div class="finance-btns"><button onclick="openModal('deposit-modal')" class="dep-btn">DEPOSITAR</button><button onclick="openModal('withdraw-modal')" class="with-btn">SACAR</button></div>
     </div>
@@ -204,22 +155,12 @@
             <div class="grid-container" id="grid-container"><div class="grid" id="grid"></div></div>
             <div class="stats-bar"><div id="multiplier-display">1.00x</div><div id="message-display">Faça sua aposta</div></div>
         </div>
-
         <div class="footer">
             <div class="footer-logos"><span class="footer-badge">🔞 +18</span><span class="footer-badge">🔒 SSL Seguro</span><span class="footer-badge">💠 PIX</span></div>
-            <div class="footer-links">
-                <span onclick="openModal('terms-modal')">Termos de Uso</span>
-                <span onclick="openModal('privacy-modal')">Privacidade</span>
-                <span onclick="openModal('responsible-modal')">Jogo Responsável</span>
-                <span onclick="openModal('support-modal')">Suporte</span>
-            </div>
-            <p class="footer-text">
-                Jogue com responsabilidade. Atividade de aposta proibida para menores de 18 anos.<br>
-                Mines Pix é um site operado sob a autorização nº 345.987.221/MFA, em conformidade com as diretrizes do Ministério da Fazenda.
-            </p>
-            <p class="copyright">© 2024 Mines Pix Entertainment. Todos os direitos reservados.</p>
+            <div class="footer-links"><span onclick="openModal('terms-modal')">Termos</span><span onclick="openModal('privacy-modal')">Privacidade</span><span onclick="openModal('responsible-modal')">Jogo Responsável</span><span onclick="openModal('support-modal')">Suporte</span></div>
+            <p class="footer-text">Jogue com responsabilidade. Atividade de aposta proibida para menores de 18 anos.<br>Mines Pix é um site operado sob a autorização nº 345.987.221/MFA.</p>
+            <p class="copyright">© 2024 Mines Pix Entertainment.</p>
         </div>
-
         <div class="live-feed"><div class="feed-item" id="live-feed-content"></div></div>
     </div>
 
