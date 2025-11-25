@@ -26,7 +26,7 @@
             margin: 0; 
             background-color: var(--bg-dark); 
             color: var(--white); 
-            font-family: 'Inter', sans-serif; /* Fonte nova */
+            font-family: 'Inter', sans-serif; 
             display: flex; 
             height: 100vh; 
             overflow: hidden; 
@@ -145,7 +145,7 @@
         .cell { 
             width: 75px; height: 75px; 
             background-color: #2f4553; 
-            border-radius: 12px; /* Mais arredondado */
+            border-radius: 12px; 
             border: none; 
             cursor: pointer; 
             font-size: 30px; 
@@ -180,7 +180,7 @@
         .live-feed { width: 100%; background: rgba(0,0,0,0.8); height: 30px; display: flex; align-items: center; overflow: hidden; font-size: 11px; color: #b1bad3; border-top: 1px solid #333; }
         .feed-item { display: flex; gap: 10px; padding: 0 20px; white-space: nowrap; animation: slideLeft 20s linear infinite; }
 
-        /* --- MODAL DE BOAS VINDAS (ESTILO BLAZE) --- */
+        /* --- MODAL DE BOAS VINDAS (CORRIGIDO) --- */
         .welcome-modal-content {
             background: linear-gradient(135deg, #1a242d 0%, #0f1923 100%);
             border-radius: 16px;
@@ -195,13 +195,12 @@
             animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         
-        /* Efeito de brilho no fundo do modal */
         .welcome-modal-content::before {
             content: '';
             position: absolute;
             top: -50%; left: -50%; width: 200%; height: 200%;
             background: radial-gradient(circle, rgba(0,231,1,0.1) 0%, transparent 60%);
-            z-index: 0;
+            z-index: 0; /* Fica atrás */
             animation: rotate 10s linear infinite;
         }
         
@@ -270,7 +269,8 @@
                 Cadastre-se agora e ganhe acesso exclusivo ao multiplicador 100x.
             </div>
             <button class="welcome-btn" onclick="showRegisterFromWelcome()">CRIAR CONTA GRÁTIS</button>
-            <div style="margin-top: 15px;">
+            
+            <div style="margin-top: 15px; position: relative; z-index: 2;">
                 <span onclick="showLoginFromWelcome()" style="color: #b1bad3; cursor: pointer; font-size: 13px;">Já tenho conta</span>
             </div>
         </div>
@@ -342,7 +342,7 @@
         <div class="user-card">
             <div class="user-card-header">
                 <span>Olá,</span>
-                <button class="btn-extrato" onclick="openModal('profile-modal')">EXTRATO</button>
+                <button class="btn-extrato" onclick="openModal('profile-modal')" title="Ver Extrato">EXTRATO</button>
             </div>
             <div class="user-card-name" id="user-name-display">Visitante</div>
             <div style="font-size:11px; color:#55657e; margin-top:2px">CPF: <span id="user-cpf-display">...</span></div>
