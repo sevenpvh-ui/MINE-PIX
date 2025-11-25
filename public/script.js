@@ -8,26 +8,23 @@ const multEl = document.getElementById('multiplier-display');
 const btn = document.getElementById('action-btn');
 const authMsg = document.getElementById('auth-msg');
 
-// Tenta pegar código de indicação da URL (ex: ?ref=JOAO)
-const urlParams = new URLSearchParams(window.location.search);
-const refCodeFromUrl = urlParams.get('ref');
-if(refCodeFromUrl) {
-    document.getElementById('reg-ref').value = refCodeFromUrl;
-    showRegister(); // Abre registro direto
-}
-
 startLiveFeed();
 
 // --- TELAS ---
 function showRegister() { document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('register-modal').classList.remove('hidden'); }
-function showLogin() { document.getElementById('register-modal').classList.add('hidden'); document.getElementById('auth-screen').classList.remove('hidden'); }
+function showLogin() { 
+    document.getElementById('register-modal').classList.add('hidden'); 
+    document.getElementById('recover-modal').classList.add('hidden'); // Fecha recuperar
+    document.getElementById('auth-screen').classList.remove('hidden'); 
+}
+function showRecover() { document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('recover-modal').classList.remove('hidden'); }
 function showMsg(id, msg) { const el = document.getElementById(id); el.innerText = msg; setTimeout(()=>el.innerText="", 3000); }
 
 // --- AUTENTICAÇÃO ---
 async function login() {
     const cpf = document.getElementById('login-cpf').value;
     const password = document.getElementById('login-pass').value;
-    if(!cpf || !password) return showMsg('login-msg', "Preencha tudo");
+    if(!cpf || !password) return showMsg('login-msg', "Preencha CPF e Senha");
 
     try {
         const res = await fetch('/api/auth/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({cpf, password}) });
@@ -38,8 +35,8 @@ async function login() {
             document.getElementById('user-cpf-display').innerText = data.cpf;
             updateBalance();
             initGame();
-        } else { showMsg('login-msg', data.error); }
-    } catch (error) { showMsg('login-msg', "Erro conexão"); }
+        } else { showMsg('login-msg', data.error || "Erro ao entrar"); }
+    } catch (error) { showMsg('login-msg', "Erro de conexão"); }
 }
 
 async function register() {
@@ -47,50 +44,45 @@ async function register() {
     const cpf = document.getElementById('reg-cpf').value;
     const phone = document.getElementById('reg-phone').value;
     const password = document.getElementById('reg-pass').value;
-    const refCode = document.getElementById('reg-ref').value; // Pega indicação
-
     if(!name || !cpf || !phone || !password) return showMsg('reg-msg', "Preencha tudo!");
 
     try {
-        const res = await fetch('/api/auth/register', {
+        const res = await fetch('/api/auth/register', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({name, cpf, phone, password}) });
+        const data = await res.json();
+        if(res.ok) { alert("Conta criada!"); login(); } else { showMsg('reg-msg', data.error); }
+    } catch (error) { showMsg('reg-msg', "Erro ao registrar"); }
+}
+
+// --- RECUPERAR SENHA (NOVO) ---
+async function resetPassword() {
+    const cpf = document.getElementById('rec-cpf').value;
+    const name = document.getElementById('rec-name').value;
+    const phone = document.getElementById('rec-phone').value;
+    const newPassword = document.getElementById('rec-newpass').value;
+
+    if(!cpf || !name || !phone || !newPassword) return showMsg('rec-msg', "Preencha tudo para confirmar sua identidade!");
+
+    try {
+        const res = await fetch('/api/auth/reset-password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, cpf, phone, password, refCode })
+            body: JSON.stringify({ cpf, name, phone, newPassword })
         });
         const data = await res.json();
+        
         if(res.ok) {
-            alert("Conta criada!");
-            login(); 
-        } else { showMsg('reg-msg', data.error); }
-    } catch (error) { showMsg('reg-msg', "Erro registro"); }
-}
-
-// --- AFILIADOS (NOVO) ---
-function openModal(id) { 
-    document.getElementById(id).classList.remove('hidden'); 
-    if(id==='profile-modal') loadTransactions();
-    if(id==='affiliate-modal') loadAffiliateStats();
-}
-function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
-
-async function loadAffiliateStats() {
-    try {
-        const res = await fetch(`/api/affiliates/stats/${currentUser.userId}`);
-        const data = await res.json();
-        document.getElementById('aff-earnings').innerText = `R$ ${data.earnings.toFixed(2)}`;
-        document.getElementById('aff-count').innerText = data.count;
-        document.getElementById('aff-link').value = data.link;
-    } catch(e) { console.error(e); }
-}
-
-function copyAffiliateLink() {
-    const copyText = document.getElementById("aff-link");
-    copyText.select();
-    document.execCommand("copy");
-    alert("Link copiado! Envie para seus amigos.");
+            alert("✅ " + data.message);
+            showLogin();
+        } else {
+            showMsg('rec-msg', data.error);
+        }
+    } catch(e) { showMsg('rec-msg', "Erro ao alterar senha"); }
 }
 
 // --- EXTRAS E FINANCEIRO ---
+function openModal(id) { document.getElementById(id).classList.remove('hidden'); if(id==='profile-modal') loadTransactions(); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
 async function claimBonus() {
     if(!currentUser) return;
     try {
@@ -101,7 +93,7 @@ async function claimBonus() {
 }
 
 function startLiveFeed() {
-    const names = ["João", "Pedro", "Maria", "Lucas", "Ana"];
+    const names = ["João", "Pedro", "Maria", "Lucas", "Ana", "Carlos", "Bia"];
     const feedEl = document.getElementById('live-feed-content');
     setInterval(() => {
         const name = names[Math.floor(Math.random() * names.length)] + "***";
@@ -124,9 +116,7 @@ async function loadTransactions() {
     data.forEach(t => {
         const date = new Date(t.createdAt).toLocaleDateString('pt-BR');
         let color = t.status === 'approved' ? '#00e701' : 'orange';
-        // Mostra "Comissão" se for affiliate
-        let typeShow = t.type === 'commission' ? 'Comissão' : t.type;
-        tbody.innerHTML += `<tr style="border-bottom:1px solid #333"><td style="padding:8px">${typeShow}</td><td>R$ ${t.amount.toFixed(2)}</td><td style="color:${color}">${t.status}</td><td style="color:#777">${date}</td></tr>`;
+        tbody.innerHTML += `<tr style="border-bottom:1px solid #333"><td style="padding:8px">${t.type}</td><td>R$ ${t.amount.toFixed(2)}</td><td style="color:${color}">${t.status}</td><td style="color:#777">${date}</td></tr>`;
     });
 }
 
