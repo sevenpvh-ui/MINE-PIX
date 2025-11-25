@@ -19,7 +19,7 @@ function calculateMultiplier(mines, openedSpots) {
     if (remainingSafe <= 0) return 0;
 
     const probability = remainingSafe / remainingSpots;
-    const houseEdge = 0.97; // 3% de margem da casa
+    const houseEdge = 0.85; // 15% de margem da casa
     return houseEdge / probability;
 }
 
