@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const rateLimit = require('express-rate-limit'); // Proteção Anti-Spam
+const rateLimit = require('express-rate-limit');
 const { MercadoPagoConfig, Payment } = require('mercadopago');
 
 const { createGrid, calculateMultiplier } = require('./gameEngine');
@@ -11,20 +11,15 @@ const User = require('./models/User');
 
 const app = express();
 
-// --- SEGURANÇA ANTI-ROBÔ ---
-// Limita cada IP a 100 requisições a cada 15 minutos
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, 
-    max: 200, 
-    message: { error: "Muitas tentativas. Aguarde um pouco." }
-});
-app.use('/api/', limiter); // Aplica a proteção em todas as rotas da API
+// Rate Limit
+const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200, message: { error: "Muitas tentativas." } });
+app.use('/api/', limiter);
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// --- CONFIGURAÇÕES ---
+// Configurações
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI;
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN;
@@ -37,36 +32,26 @@ mongoose.connect(MONGO_URI)
 const client = new MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN });
 const payment = new Payment(client);
 
-// --- ROTA RANKING (NOVA) ---
+// --- ROTA RANKING ---
 app.get('/api/leaderboard', async (req, res) => {
     try {
-        // Busca os 5 usuários com maior saldo
-        const topUsers = await User.find({}, 'name balance')
-            .sort({ balance: -1 })
-            .limit(5);
-        
-        // Mascara o nome (Ex: João -> Joa***) para privacidade
-        const maskedUsers = topUsers.map(u => ({
-            name: u.name.substring(0, 3) + '***',
-            balance: u.balance
-        }));
-
+        const topUsers = await User.find({}, 'name balance').sort({ balance: -1 }).limit(5);
+        const maskedUsers = topUsers.map(u => ({ name: u.name.substring(0, 3) + '***', balance: u.balance }));
         res.json(maskedUsers);
     } catch (e) { res.status(500).json({ error: "Erro ranking" }); }
 });
 
 // ==================================================================
-// 🔐 AUTENTICAÇÃO (MANTIDO)
+// 🔐 AUTENTICAÇÃO
 // ==================================================================
 
 app.post('/api/auth/register', async (req, res) => {
     const { name, cpf, phone, password, refCode } = req.body;
     try {
-        if (!name || !cpf || !phone || !password) return res.status(400).json({ error: "Preencha todos os campos!" });
+        if (!name || !cpf || !phone || !password) return res.status(400).json({ error: "Preencha tudo" });
         const cleanCpf = cpf.replace(/\D/g, ''); 
         if (await User.findOne({ cpf: cleanCpf })) return res.status(400).json({ error: "CPF já cadastrado" });
         
-        // Lógica Afiliado
         let referrerId = null;
         if (refCode) {
             const referrer = await User.findOne({ affiliateCode: refCode });
@@ -78,7 +63,7 @@ app.post('/api/auth/register', async (req, res) => {
         const user = await User.create({ name, phone, cpf: cleanCpf, password: hashedPassword, affiliateCode: newAffiliateCode, referredBy: referrerId });
         
         res.json({ message: "Criado", userId: user._id, name: user.name, cpf: user.cpf, balance: user.balance });
-    } catch (e) { res.status(500).json({ error: "Erro ao registrar" }); }
+    } catch (e) { res.status(500).json({ error: "Erro registro" }); }
 });
 
 app.post('/api/auth/login', async (req, res) => {
@@ -87,10 +72,14 @@ app.post('/api/auth/login', async (req, res) => {
         const cleanCpf = cpf.replace(/\D/g, '');
         const user = await User.findOne({ cpf: cleanCpf });
         if (!user) return res.status(400).json({ error: "CPF não encontrado" });
+        
+        // VERIFICAÇÃO DE BANIMENTO (NOVO)
+        if (user.isBanned) return res.status(403).json({ error: "Conta bloqueada pelo administrador." });
+
         if (!await bcrypt.compare(password, user.password)) return res.status(400).json({ error: "Senha incorreta" });
 
         res.json({ message: "Logado", userId: user._id, name: user.name, cpf: user.cpf, balance: user.balance });
-    } catch (e) { res.status(500).json({ error: "Erro ao logar" }); }
+    } catch (e) { res.status(500).json({ error: "Erro login" }); }
 });
 
 app.post('/api/auth/reset-password', async (req, res) => {
@@ -98,21 +87,20 @@ app.post('/api/auth/reset-password', async (req, res) => {
     try {
         const cleanCpf = cpf.replace(/\D/g, '');
         const user = await User.findOne({ cpf: cleanCpf });
-        if (!user) return res.status(404).json({ error: "CPF não encontrado" });
-        if (user.phone !== phone || user.name.trim().toLowerCase() !== name.trim().toLowerCase()) {
-            return res.status(400).json({ error: "Dados incorretos!" });
-        }
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
-        user.password = hashedPassword;
+        if (!user) return res.status(404).json({ error: "Não encontrado" });
+        if (user.phone !== phone || user.name.trim().toLowerCase() !== name.trim().toLowerCase()) return res.status(400).json({ error: "Dados incorretos" });
+        
+        user.password = await bcrypt.hash(newPassword, 10);
         await user.save();
         res.json({ message: "Senha alterada!" });
-    } catch (e) { res.status(500).json({ error: "Erro ao alterar senha" }); }
+    } catch (e) { res.status(500).json({ error: "Erro reset" }); }
 });
 
 app.get('/api/me/:userId', async (req, res) => {
     try {
         const user = await User.findById(req.params.userId);
         if(!user) return res.status(404).json({error: "User not found"});
+        if (user.isBanned) return res.status(403).json({ error: "Banido" });
         res.json({ balance: user.balance, name: user.name, cpf: user.cpf });
     } catch (e) { res.status(500).json({ error: "Erro" }); }
 });
@@ -226,9 +214,109 @@ app.get('/api/me/transactions/:userId', async (req, res) => {
     } catch (e) { res.status(500).json({ error: "Erro histórico" }); }
 });
 
-// --- ADMIN ---
-app.get('/api/admin/dashboard', async (req, res) => { const { secret } = req.headers; if(secret !== 'admin123') return res.status(403).json({ error: "Negado" }); const users = await User.find(); let totalUsers = users.length, totalBalance = 0, pending = []; users.forEach(u => { totalBalance += u.balance; u.transactions.forEach(t => { if (t.type === 'withdraw' && t.status === 'pending') pending.push({ userId: u._id, cpf: u.cpf, amount: t.amount, pixKey: u.pixKey, pixType: u.pixKeyType, date: t.createdAt, transId: t._id }); }); }); res.json({ totalUsers, totalBalance, pendingWithdrawals: pending }); });
-app.post('/api/admin/action', async (req, res) => { const { userId, transId, action, secret } = req.body; if(secret !== 'admin123') return res.status(403).json({ error: "Negado" }); const user = await User.findById(userId); const trans = user.transactions.id(transId); if (action === 'approve') trans.status = 'approved'; else if (action === 'reject') { trans.status = 'rejected'; user.balance += trans.amount; } await user.save(); res.json({ message: "Sucesso!" }); });
+// ==================================================================
+// 🕵️ ÁREA ADMINISTRATIVA (ATUALIZADA)
+// ==================================================================
+
+// 1. Dashboard Financeiro Completo
+app.get('/api/admin/dashboard', async (req, res) => {
+    const { secret } = req.headers;
+    if(secret !== 'admin123') return res.status(403).json({ error: "Negado" });
+    
+    try {
+        const users = await User.find();
+        
+        let totalUsers = users.length;
+        let totalBalance = 0;
+        let totalDeposited = 0;
+        let totalWithdrawn = 0;
+        let pendingWithdrawals = [];
+        let topAffiliates = [];
+
+        users.forEach(u => {
+            totalBalance += u.balance;
+            
+            // Estatísticas de Afiliados
+            if(u.referralCount > 0) {
+                topAffiliates.push({ name: u.name, count: u.referralCount, earnings: u.affiliateEarnings });
+            }
+
+            u.transactions.forEach(t => {
+                if (t.type === 'deposit' && t.status === 'approved') totalDeposited += t.amount;
+                if (t.type === 'withdraw' && t.status === 'approved') totalWithdrawn += t.amount;
+                
+                // Lista de Saques Pendentes
+                if (t.type === 'withdraw' && t.status === 'pending') {
+                    pendingWithdrawals.push({ userId: u._id, cpf: u.cpf, amount: t.amount, pixKey: u.pixKey, pixType: u.pixKeyType, date: t.createdAt, transId: t._id });
+                }
+            });
+        });
+
+        // Ordena afiliados
+        topAffiliates.sort((a,b) => b.earnings - a.earnings);
+
+        res.json({ 
+            totalUsers, 
+            totalBalance, 
+            pendingWithdrawals,
+            financials: {
+                deposited: totalDeposited,
+                withdrawn: totalWithdrawn,
+                profit: totalDeposited - totalWithdrawn
+            },
+            topAffiliates: topAffiliates.slice(0, 10) // Top 10
+        });
+    } catch(e) {
+        res.status(500).json({ error: "Erro admin" });
+    }
+});
+
+// 2. Lista de Todos os Usuários (Com Busca)
+app.post('/api/admin/users', async (req, res) => {
+    const { secret, search } = req.body;
+    if(secret !== 'admin123') return res.status(403).json({ error: "Negado" });
+
+    try {
+        let query = {};
+        if(search) query = { cpf: { $regex: search, $options: 'i' } }; // Busca por CPF
+        
+        const users = await User.find(query, 'name cpf balance isBanned phone').limit(50);
+        res.json(users);
+    } catch(e) { res.status(500).json({ error: "Erro lista users" }); }
+});
+
+// 3. Ação Admin (Saque)
+app.post('/api/admin/action', async (req, res) => {
+    const { userId, transId, action, secret } = req.body;
+    if(secret !== 'admin123') return res.status(403).json({ error: "Negado" });
+    const user = await User.findById(userId);
+    const trans = user.transactions.id(transId);
+    if (action === 'approve') trans.status = 'approved';
+    else if (action === 'reject') { trans.status = 'rejected'; user.balance += trans.amount; }
+    await user.save();
+    res.json({ message: "Sucesso!" });
+});
+
+// 4. Gestão de Usuário (Editar Saldo / Banir)
+app.post('/api/admin/user/update', async (req, res) => {
+    const { userId, newBalance, isBanned, secret } = req.body;
+    if(secret !== 'admin123') return res.status(403).json({ error: "Negado" });
+
+    try {
+        const user = await User.findById(userId);
+        if(!user) return res.status(404).json({ error: "User not found" });
+
+        if(newBalance !== undefined) {
+            // Registra ajuste no histórico
+            user.transactions.push({ type: 'admin_adjustment', amount: parseFloat(newBalance) - user.balance, status: 'approved', mpPaymentId: 'ADMIN', createdAt: Date.now() });
+            user.balance = parseFloat(newBalance);
+        }
+        if(isBanned !== undefined) user.isBanned = isBanned;
+
+        await user.save();
+        res.json({ message: "Usuário atualizado!" });
+    } catch(e) { res.status(500).json({ error: "Erro update user" }); }
+});
 
 // --- JOGO ---
 app.post('/api/game/start', async (req, res) => { const { userId, betAmount, minesCount } = req.body; try { const user = await User.findById(userId); if (user.balance < betAmount) return res.status(400).json({ error: "Saldo insuficiente" }); if (user.activeGame && !user.activeGame.isGameOver) return res.status(400).json({ error: "Jogo em andamento" }); user.balance -= parseFloat(betAmount); user.activeGame = { grid: createGrid(minesCount), revealed: Array(25).fill(false), minesCount, betAmount, currentMultiplier: 1.0, diamondsFound: 0, isGameOver: false }; await user.save(); res.json({ balance: user.balance }); } catch (e) { res.status(500).json({ error: "Erro" }); } });
