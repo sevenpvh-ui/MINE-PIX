@@ -26,7 +26,7 @@ mongoose.connect(MONGO_URI)
 const client = new MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN });
 const payment = new Payment(client);
 
-// --- AUTENTICAÇÃO (CPF) ---
+// --- AUTENTICAÇÃO ---
 app.post('/api/auth/register', async (req, res) => {
     const { cpf, password } = req.body;
     try {
@@ -66,10 +66,12 @@ app.post('/api/payment/deposit', async (req, res) => {
     const { userId, amount } = req.body;
     try {
         const user = await User.findById(userId);
-        const fakeEmail = `${user.cpf}@minespro.com`;
+        // Gera email técnico com o novo nome
+        const fakeEmail = `${user.cpf}@minespix.com`; 
+        
         const body = {
             transaction_amount: parseFloat(amount),
-            description: 'Creditos Mines',
+            description: 'Creditos Mines Pix',
             payment_method_id: 'pix',
             payer: { email: fakeEmail },
             notification_url: `${SITE_URL}/api/webhook`
@@ -88,7 +90,6 @@ app.post('/api/payment/deposit', async (req, res) => {
     } catch (e) { res.status(500).json({ error: "Erro PIX" }); }
 });
 
-// Debug / Simulação
 app.post('/api/debug/deposit', async (req, res) => {
     const { userId, amount } = req.body;
     try {
@@ -101,7 +102,6 @@ app.post('/api/debug/deposit', async (req, res) => {
     } catch (e) { res.status(500).json({ error: "Erro simulação" }); }
 });
 
-// Webhook
 app.post('/api/webhook', async (req, res) => {
     const { action, data } = req.body;
     if (action === 'payment.created' || action === 'payment.updated') {
@@ -123,7 +123,6 @@ app.post('/api/webhook', async (req, res) => {
     res.status(200).send("OK");
 });
 
-// Saque
 app.post('/api/payment/withdraw', async (req, res) => {
     const { userId, amount, pixKey, pixKeyType } = req.body;
     try {
@@ -138,27 +137,23 @@ app.post('/api/payment/withdraw', async (req, res) => {
     } catch (e) { res.status(500).json({ error: "Erro saque" }); }
 });
 
-// Bônus Diário
+// --- EXTRAS ---
 app.post('/api/bonus/daily', async (req, res) => {
     const { userId } = req.body;
     try {
         const user = await User.findById(userId);
         const now = new Date();
         const last = user.lastDailyBonus ? new Date(user.lastDailyBonus) : null;
-        
         if (last && (now - last) < 86400000) return res.status(400).json({ error: "Volte amanhã!" });
-
         const bonus = 1.00;
         user.balance += bonus;
         user.lastDailyBonus = now;
         user.transactions.push({ type: 'bonus', amount: bonus, status: 'approved', mpPaymentId: 'BONUS_' + Date.now() });
-        
         await user.save();
         res.json({ message: "Bônus resgatado!", balance: user.balance });
     } catch (e) { res.status(500).json({ error: "Erro bônus" }); }
 });
 
-// Histórico
 app.get('/api/me/transactions/:userId', async (req, res) => {
     try {
         const user = await User.findById(req.params.userId);
@@ -216,7 +211,6 @@ app.post('/api/game/play', async (req, res) => {
         if (game.revealed[index]) return res.status(400).json({ error: "Clicado" });
         game.revealed[index] = true;
         user.markModified('activeGame.revealed');
-        
         if (game.grid[index] === 'mine') {
             game.isGameOver = true;
             await user.save();
