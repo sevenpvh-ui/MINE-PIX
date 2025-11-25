@@ -130,7 +130,7 @@
         @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes slideLeft { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
         
-        /* --- SHAKE ANIMATION (CORRIGIDO) --- */
+        /* SHAKE ANIMATION */
         @keyframes shake {
             0% { transform: translate(1px, 1px) rotate(0deg); }
             10% { transform: translate(-1px, -2px) rotate(-1deg); }
@@ -146,27 +146,28 @@
         }
         .shake-anim { animation: shake 0.5s; border: 2px solid #ff4d4d !important; }
 
+        /* MOBILE FIXES */
         @media (max-width: 768px) {
             body { flex-direction: column; height: auto; overflow-y: scroll; }
             .sidebar { width: 100%; padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-            .game-area { height: auto; display: block; }
+            .game-area { height: auto; display: block; padding-bottom: 40px; }
             
-            /* CORREÇÃO PARA O GRID NO CELULAR */
+            /* CORREÇÃO GRID MOBILE - AUMENTADO */
             .grid { 
                 grid-template-columns: repeat(5, 1fr); 
                 gap: 8px; 
-                width: 100%; 
-                max-width: 350px; 
-                margin: 0 auto; /* Centraliza o grid */
+                width: 95%; /* Ocupa 95% da tela */
+                max-width: 500px; /* Limite maior para tablets */
+                margin: 0 auto;
             }
-            
             .cell { 
                 width: auto; 
                 height: auto; 
-                aspect-ratio: 1/1; /* Mantém sempre quadrado */
+                aspect-ratio: 1/1; /* Garante que seja quadrado */
             }
             
-            .live-feed { position: relative; }
+            .live-feed { position: fixed; bottom: 0; left: 0; z-index: 100; }
+            .footer { margin-bottom: 30px; }
         }
     </style>
 </head>
@@ -190,17 +191,12 @@
     <div id="privacy-modal" class="overlay hidden"><div class="modal"><h2>🔒 Privacidade</h2><p style="color:#b1bad3">Dados seguros e criptografados.</p><button class="btn-main btn-primary" onclick="closeModal('privacy-modal')">FECHAR</button></div></div>
     <div id="responsible-modal" class="overlay hidden"><div class="modal"><h2>🛡️ Jogo Responsável</h2><p style="color:#b1bad3">Jogue com moderação.</p><button class="btn-main btn-primary" onclick="closeModal('responsible-modal')">FECHAR</button></div></div>
     <div id="support-modal" class="overlay hidden"><div class="modal"><h2>🎧 Suporte</h2><p style="color:#b1bad3">suporte@minespix.com</p><button class="btn-main btn-primary" onclick="closeModal('support-modal')">FECHAR</button></div></div>
-
     <div id="ranking-modal" class="overlay hidden"><div class="modal"><h2>🏆 Ranking</h2><div style="max-height:200px;overflow:auto"><table style="width:100%;text-align:left;color:#b1bad3"><thead><tr><th>#</th><th>Nome</th><th>Saldo</th></tr></thead><tbody id="ranking-list"></tbody></table></div><button class="btn-main btn-primary" onclick="closeModal('ranking-modal')">FECHAR</button></div></div>
     
     <div id="affiliate-modal" class="overlay hidden">
         <div class="modal">
             <h2>🤝 Indique e Ganhe</h2>
-            <p style="color:#b1bad3">Ganhe 10% de comissão vitalícia.</p>
-            <div class="user-card" style="margin-bottom:15px; text-align:center">
-                <div style="color:#b1bad3;font-size:11px;margin-bottom:5px">GANHOS TOTAIS</div>
-                <div class="affiliate-val" style="font-size:28px;color:var(--accent);font-weight:900" id="aff-earnings">R$ 0.00</div>
-            </div>
+            <div class="user-card" style="margin-bottom:15px; text-align:center"><div style="color:#b1bad3;font-size:11px;margin-bottom:5px">GANHOS TOTAIS</div><div class="affiliate-val" style="font-size:28px;color:var(--accent);font-weight:900" id="aff-earnings">R$ 0.00</div></div>
             <input type="text" id="aff-link" readonly style="background:#0b1219; text-align:center; font-size:12px; margin-bottom:10px;">
             <button class="btn-main btn-primary" onclick="copyAffiliateLink()">COPIAR LINK</button>
             <button class="btn-main btn-outline" style="margin-top:10px" onclick="closeModal('affiliate-modal')">FECHAR</button>
@@ -248,86 +244,32 @@
 
     <div class="sidebar">
         <div class="logo-area">💎 Mines Pix</div>
-        
         <div class="user-card">
-            <div class="user-card-header">
-                <span>Olá,</span>
-                <button class="btn-extrato" onclick="openModal('profile-modal')" title="Ver Extrato">EXTRATO</button>
-            </div>
+            <div class="user-card-header"><span>Olá,</span><button class="btn-extrato" onclick="openModal('profile-modal')">EXTRATO</button></div>
             <div class="user-card-name" id="user-name-display">Visitante</div>
             <div style="font-size:11px; color:#55657e; margin-top:2px">CPF: <span id="user-cpf-display">...</span></div>
         </div>
-
         <button class="btn-main btn-bonus" onclick="claimBonus()">🎁 BÔNUS DIÁRIO</button>
         <button class="btn-main btn-outline" onclick="openModal('affiliate-modal')" style="margin-bottom:5px">🤝 AFILIADOS</button>
         <button class="btn-main btn-outline" onclick="openModal('ranking-modal')">🏆 RANKING</button>
-        
         <div style="margin-top: auto"></div>
-
-        <div class="input-group">
-            <label>Valor da Aposta</label>
-            <div class="input-wrapper">
-                <input type="number" id="betAmount" value="5.00">
-                <div class="input-actions">
-                    <button onclick="adjustBet(0.5)">½</button>
-                    <button onclick="adjustBet(2)">2x</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="input-group">
-            <label>Minas</label>
-            <div class="input-wrapper">
-                <select id="minesCount">
-                    <option value="3">3 Minas</option>
-                    <option value="5">5 Minas</option>
-                    <option value="10">10 Minas</option>
-                    <option value="20">20 Minas</option>
-                </select>
-            </div>
-        </div>
-
+        <div class="input-group"><label>Valor</label><div class="input-wrapper"><input type="number" id="betAmount" value="5.00"><div class="input-actions"><button onclick="adjustBet(0.5)">½</button><button onclick="adjustBet(2)">2x</button></div></div></div>
+        <div class="input-group"><label>Minas</label><div class="input-wrapper"><select id="minesCount"><option value="3">3 Minas</option><option value="5">5 Minas</option><option value="10">10 Minas</option></select></div></div>
         <button class="btn-main btn-primary" id="action-btn" onclick="handleAction()">COMEÇAR JOGO</button>
-        
-        <div class="finance-row">
-            <button class="btn-main btn-outline" style="background:#00e701; color:black; border:none" onclick="openModal('deposit-modal')">DEPOSITAR</button>
-            <button class="btn-main btn-outline" onclick="openModal('withdraw-modal')">SACAR</button>
-        </div>
+        <div class="finance-row"><button class="btn-main btn-outline" style="background:#00e701; color:black; border:none" onclick="openModal('deposit-modal')">DEPOSITAR</button><button class="btn-main btn-outline" onclick="openModal('withdraw-modal')">SACAR</button></div>
     </div>
 
     <div class="game-area">
         <div class="game-content">
-            <div class="balance-badge">
-                R$ <span id="balance">0.00</span>
-            </div>
-            
-            <div class="grid-container">
-                <div class="grid" id="grid"></div>
-            </div>
-            
-            <div class="stats-bar">
-                <div id="multiplier-display">1.00x</div>
-                <div id="message-display">Faça sua aposta</div>
-            </div>
+            <div class="balance-badge">R$ <span id="balance">0.00</span></div>
+            <div class="grid-container"><div class="grid" id="grid"></div></div>
+            <div class="stats-bar"><div id="multiplier-display">1.00x</div><div id="message-display">Faça sua aposta</div></div>
         </div>
-
         <div class="footer">
-            <div class="footer-logos">
-                <span class="footer-badge">🔞 +18</span>
-                <span class="footer-badge">🔒 SSL Seguro</span>
-            </div>
-            <div class="footer-links">
-                <span onclick="openModal('terms-modal')">Termos</span>
-                <span onclick="openModal('privacy-modal')">Privacidade</span>
-                <span onclick="openModal('responsible-modal')">Responsável</span>
-                <span onclick="openModal('support-modal')">Suporte</span>
-            </div>
-            <p style="opacity:0.5; margin-top:15px">
-                Mines Pix © 2024. Todos os direitos reservados.<br>
-                Plataforma operada sob licença internacional.
-            </p>
+            <div class="footer-logos"><span class="footer-badge">🔞 +18</span><span class="footer-badge">🔒 SSL Seguro</span></div>
+            <div class="footer-links"><span onclick="openModal('terms-modal')">Termos</span><span onclick="openModal('privacy-modal')">Privacidade</span><span onclick="openModal('responsible-modal')">Responsável</span><span onclick="openModal('support-modal')">Suporte</span></div>
+            <p style="opacity:0.5; margin-top:15px">Mines Pix © 2024. Todos os direitos reservados.</p>
         </div>
-
         <div class="live-feed"><div class="feed-item" id="live-feed-content"></div></div>
     </div>
 
