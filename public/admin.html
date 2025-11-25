@@ -43,10 +43,7 @@
         .search-bar { display: flex; gap: 10px; margin-bottom: 20px; }
         input { background: #1a242d; border: 1px solid #2f4553; color: white; padding: 10px; border-radius: 5px; flex: 1; max-width: 300px; }
         
-        /* Login Screen */
         #login-screen { position: fixed; top:0; left:0; width:100%; height:100%; background:#0f1923; display:flex; justify-content:center; align-items:center; z-index:100; }
-        
-        /* Modal Edit User */
         .modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:50; display:none; justify-content:center; align-items:center; }
         .modal { background: #1a242d; padding: 20px; border-radius: 10px; width: 300px; border: 1px solid #2f4553; }
         .modal label { display: block; margin-top: 10px; font-size: 12px; color: #b1bad3; }
@@ -68,6 +65,7 @@
         <div class="menu-item" onclick="showTab('withdrawals')">💸 Saques Pendentes</div>
         <div class="menu-item" onclick="showTab('users')">👥 Gerenciar Usuários</div>
         <div class="menu-item" onclick="showTab('affiliates')">🤝 Top Afiliados</div>
+        <div class="menu-item" onclick="showTab('settings')">⚙️ Configurações</div>
     </div>
 
     <div class="content">
@@ -83,30 +81,27 @@
 
         <div id="withdrawals" class="section">
             <h1>Saques Pendentes</h1>
-            <table>
-                <thead><tr><th>CPF</th><th>Valor</th><th>Chave PIX</th><th>Data</th><th>Ação</th></tr></thead>
-                <tbody id="withdraw-list"></tbody>
-            </table>
+            <table><thead><tr><th>CPF</th><th>Valor</th><th>Chave PIX</th><th>Data</th><th>Ação</th></tr></thead><tbody id="withdraw-list"></tbody></table>
         </div>
 
         <div id="users" class="section">
             <h1>Gerenciar Usuários</h1>
-            <div class="search-bar">
-                <input type="text" id="search-input" placeholder="Buscar por CPF...">
-                <button class="btn btn-edit" onclick="loadUsers()">BUSCAR</button>
-            </div>
-            <table>
-                <thead><tr><th>Nome</th><th>CPF</th><th>Saldo</th><th>Status</th><th>Ação</th></tr></thead>
-                <tbody id="users-list"></tbody>
-            </table>
+            <div class="search-bar"><input type="text" id="search-input" placeholder="Buscar por CPF..."><button class="btn btn-edit" onclick="loadUsers()">BUSCAR</button></div>
+            <table><thead><tr><th>Nome</th><th>CPF</th><th>Saldo</th><th>Status</th><th>Ação</th></tr></thead><tbody id="users-list"></tbody></table>
         </div>
 
         <div id="affiliates" class="section">
             <h1>Top Afiliados</h1>
-            <table>
-                <thead><tr><th>Nome</th><th>Convidados</th><th>Comissão Paga</th></tr></thead>
-                <tbody id="affiliates-list"></tbody>
-            </table>
+            <table><thead><tr><th>Nome</th><th>Convidados</th><th>Comissão Paga</th></tr></thead><tbody id="affiliates-list"></tbody></table>
+        </div>
+
+        <div id="settings" class="section">
+            <h1>⚙️ Configurações do Site</h1>
+            <div class="card" style="max-width: 400px;">
+                <label style="color:white; margin-bottom:10px; display:block">Valor do Bônus Diário (R$)</label>
+                <input type="number" id="setting-bonus" step="0.10">
+                <button class="btn btn-approve" style="margin-top:15px; width:100%; padding:10px" onclick="saveSettings()">SALVAR ALTERAÇÕES</button>
+            </div>
         </div>
     </div>
 
@@ -133,7 +128,7 @@
 
         function checkAdmin() {
             const pass = document.getElementById('admin-pass').value;
-            if(pass === 'admin123') { // MUDE A SENHA AQUI DEPOIS
+            if(pass === 'admin123') { // SENHA
                 adminKey = pass;
                 document.getElementById('login-screen').style.display = 'none';
                 loadDashboard();
@@ -146,80 +141,53 @@
             document.getElementById(id).classList.add('active');
             event.target.classList.add('active');
             if(id === 'dashboard' || id === 'withdrawals' || id === 'affiliates') loadDashboard();
+            if(id === 'settings') loadSettings();
         }
 
         async function loadDashboard() {
             const res = await fetch('/api/admin/dashboard', { headers: { 'secret': adminKey } });
             const data = await res.json();
-
-            // Stats
             document.getElementById('stat-deposited').innerText = `R$ ${data.financials.deposited.toFixed(2)}`;
             document.getElementById('stat-withdrawn').innerText = `R$ ${data.financials.withdrawn.toFixed(2)}`;
             document.getElementById('stat-profit').innerText = `R$ ${data.financials.profit.toFixed(2)}`;
             document.getElementById('stat-balance').innerText = `R$ ${data.totalBalance.toFixed(2)}`;
 
-            // Withdrawals
-            const wList = document.getElementById('withdraw-list');
-            wList.innerHTML = '';
-            data.pendingWithdrawals.forEach(w => {
-                wList.innerHTML += `<tr><td>${w.cpf}</td><td class="green">R$ ${w.amount.toFixed(2)}</td><td>${w.pixKey} (${w.pixType})</td><td>${new Date(w.date).toLocaleDateString()}</td><td><button class="btn btn-approve" onclick="action('${w.userId}','${w.transId}','approve')">Pagar</button><button class="btn btn-reject" onclick="action('${w.userId}','${w.transId}','reject')">X</button></td></tr>`;
-            });
+            const wList = document.getElementById('withdraw-list'); wList.innerHTML = '';
+            data.pendingWithdrawals.forEach(w => { wList.innerHTML += `<tr><td>${w.cpf}</td><td class="green">R$ ${w.amount.toFixed(2)}</td><td>${w.pixKey} (${w.pixType})</td><td>${new Date(w.date).toLocaleDateString()}</td><td><button class="btn btn-approve" onclick="action('${w.userId}','${w.transId}','approve')">Pagar</button><button class="btn btn-reject" onclick="action('${w.userId}','${w.transId}','reject')">X</button></td></tr>`; });
 
-            // Affiliates
-            const aList = document.getElementById('affiliates-list');
-            aList.innerHTML = '';
-            data.topAffiliates.forEach(a => {
-                aList.innerHTML += `<tr><td>${a.name}</td><td>${a.count}</td><td class="green">R$ ${a.earnings.toFixed(2)}</td></tr>`;
-            });
+            const aList = document.getElementById('affiliates-list'); aList.innerHTML = '';
+            data.topAffiliates.forEach(a => { aList.innerHTML += `<tr><td>${a.name}</td><td>${a.count}</td><td class="green">R$ ${a.earnings.toFixed(2)}</td></tr>`; });
         }
 
         async function loadUsers() {
             const search = document.getElementById('search-input').value;
-            const res = await fetch('/api/admin/users', { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ secret: adminKey, search }) 
-            });
+            const res = await fetch('/api/admin/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret: adminKey, search }) });
             const users = await res.json();
-            const uList = document.getElementById('users-list');
-            uList.innerHTML = '';
-            users.forEach(u => {
-                const status = u.isBanned ? '<span style="color:red">Banido</span>' : '<span style="color:green">Ativo</span>';
-                uList.innerHTML += `<tr><td>${u.name}</td><td>${u.cpf}</td><td>R$ ${u.balance.toFixed(2)}</td><td>${status}</td><td><button class="btn btn-edit" onclick="openEdit('${u._id}', '${u.balance}', ${u.isBanned})">Editar</button></td></tr>`;
-            });
+            const uList = document.getElementById('users-list'); uList.innerHTML = '';
+            users.forEach(u => { const status = u.isBanned ? '<span style="color:red">Banido</span>' : '<span style="color:green">Ativo</span>'; uList.innerHTML += `<tr><td>${u.name}</td><td>${u.cpf}</td><td>R$ ${u.balance.toFixed(2)}</td><td>${status}</td><td><button class="btn btn-edit" onclick="openEdit('${u._id}', '${u.balance}', ${u.isBanned})">Editar</button></td></tr>`; });
+        }
+
+        async function loadSettings() {
+            const res = await fetch('/api/admin/settings', { headers: { 'secret': adminKey } });
+            const data = await res.json();
+            document.getElementById('setting-bonus').value = data.dailyBonus;
+        }
+
+        async function saveSettings() {
+            const val = document.getElementById('setting-bonus').value;
+            await fetch('/api/admin/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret: adminKey, dailyBonus: val }) });
+            alert("Configurações salvas!");
         }
 
         async function action(userId, transId, action) {
             if(!confirm("Tem certeza?")) return;
-            await fetch('/api/admin/action', { 
-                method: 'POST', headers: {'Content-Type':'application/json'}, 
-                body: JSON.stringify({ userId, transId, action, secret: adminKey }) 
-            });
+            await fetch('/api/admin/action', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId, transId, action, secret: adminKey }) });
             loadDashboard();
         }
 
-        // EDIT USER FUNCTIONS
-        function openEdit(id, balance, banned) {
-            document.getElementById('edit-id').value = id;
-            document.getElementById('edit-balance').value = balance;
-            document.getElementById('edit-banned').value = banned.toString();
-            document.getElementById('edit-modal').style.display = 'flex';
-        }
+        function openEdit(id, balance, banned) { document.getElementById('edit-id').value = id; document.getElementById('edit-balance').value = balance; document.getElementById('edit-banned').value = banned.toString(); document.getElementById('edit-modal').style.display = 'flex'; }
         function closeEdit() { document.getElementById('edit-modal').style.display = 'none'; }
-        
-        async function saveUser() {
-            const id = document.getElementById('edit-id').value;
-            const bal = document.getElementById('edit-balance').value;
-            const ban = document.getElementById('edit-banned').value === 'true';
-            
-            await fetch('/api/admin/user/update', {
-                method: 'POST', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({ userId: id, newBalance: bal, isBanned: ban, secret: adminKey })
-            });
-            alert("Salvo!");
-            closeEdit();
-            loadUsers();
-        }
+        async function saveUser() { const id = document.getElementById('edit-id').value; const bal = document.getElementById('edit-balance').value; const ban = document.getElementById('edit-banned').value === 'true'; await fetch('/api/admin/user/update', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: id, newBalance: bal, isBanned: ban, secret: adminKey }) }); alert("Salvo!"); closeEdit(); loadUsers(); }
     </script>
 </body>
 </html>
