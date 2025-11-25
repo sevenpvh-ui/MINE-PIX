@@ -8,6 +8,7 @@ const { MercadoPagoConfig, Payment } = require('mercadopago');
 
 const { createGrid, calculateMultiplier } = require('./gameEngine');
 const User = require('./models/User');
+const Settings = require('./models/Settings'); // NOVO IMPORT
 
 const app = express();
 
@@ -26,7 +27,15 @@ const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN;
 const SITE_URL = process.env.SITE_URL; 
 
 mongoose.connect(MONGO_URI)
-    .then(() => console.log("✅ MongoDB Conectado"))
+    .then(async () => {
+        console.log("✅ MongoDB Conectado");
+        // INICIALIZA CONFIGURAÇÕES SE NÃO EXISTIREM
+        const settings = await Settings.findOne();
+        if (!settings) {
+            await Settings.create({ dailyBonus: 1.00 });
+            console.log("⚙️ Configurações padrões criadas.");
+        }
+    })
     .catch(err => console.error("❌ Erro Mongo:", err));
 
 const client = new MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN });
@@ -73,7 +82,6 @@ app.post('/api/auth/login', async (req, res) => {
         const user = await User.findOne({ cpf: cleanCpf });
         if (!user) return res.status(400).json({ error: "CPF não encontrado" });
         
-        // VERIFICAÇÃO DE BANIMENTO (NOVO)
         if (user.isBanned) return res.status(403).json({ error: "Conta bloqueada pelo administrador." });
 
         if (!await bcrypt.compare(password, user.password)) return res.status(400).json({ error: "Senha incorreta" });
@@ -190,7 +198,7 @@ app.post('/api/payment/withdraw', async (req, res) => {
     } catch (e) { res.status(500).json({ error: "Erro saque" }); }
 });
 
-// --- EXTRAS ---
+// --- EXTRAS (BÔNUS DIÁRIO DINÂMICO) ---
 app.post('/api/bonus/daily', async (req, res) => {
     const { userId } = req.body;
     try {
@@ -198,11 +206,16 @@ app.post('/api/bonus/daily', async (req, res) => {
         const now = new Date();
         const last = user.lastDailyBonus ? new Date(user.lastDailyBonus) : null;
         if (last && (now - last) < 86400000) return res.status(400).json({ error: "Volte amanhã!" });
-        user.balance += 1.00;
+        
+        // PEGA O VALOR DO BANCO
+        const settings = await Settings.findOne();
+        const bonusAmount = settings ? settings.dailyBonus : 1.00;
+
+        user.balance += bonusAmount;
         user.lastDailyBonus = now;
-        user.transactions.push({ type: 'bonus', amount: 1.00, status: 'approved', mpPaymentId: 'BONUS_' + Date.now() });
+        user.transactions.push({ type: 'bonus', amount: bonusAmount, status: 'approved', mpPaymentId: 'BONUS_' + Date.now() });
         await user.save();
-        res.json({ message: "Bônus resgatado!", balance: user.balance });
+        res.json({ message: `Bônus de R$ ${bonusAmount.toFixed(2)} resgatado!`, balance: user.balance });
     } catch (e) { res.status(500).json({ error: "Erro bônus" }); }
 });
 
@@ -218,7 +231,7 @@ app.get('/api/me/transactions/:userId', async (req, res) => {
 // 🕵️ ÁREA ADMINISTRATIVA (ATUALIZADA)
 // ==================================================================
 
-// 1. Dashboard Financeiro Completo
+// Dashboard
 app.get('/api/admin/dashboard', async (req, res) => {
     const { secret } = req.headers;
     if(secret !== 'admin123') return res.status(403).json({ error: "Negado" });
@@ -235,57 +248,59 @@ app.get('/api/admin/dashboard', async (req, res) => {
 
         users.forEach(u => {
             totalBalance += u.balance;
-            
-            // Estatísticas de Afiliados
-            if(u.referralCount > 0) {
-                topAffiliates.push({ name: u.name, count: u.referralCount, earnings: u.affiliateEarnings });
-            }
+            if(u.referralCount > 0) topAffiliates.push({ name: u.name, count: u.referralCount, earnings: u.affiliateEarnings });
 
             u.transactions.forEach(t => {
                 if (t.type === 'deposit' && t.status === 'approved') totalDeposited += t.amount;
                 if (t.type === 'withdraw' && t.status === 'approved') totalWithdrawn += t.amount;
-                
-                // Lista de Saques Pendentes
                 if (t.type === 'withdraw' && t.status === 'pending') {
                     pendingWithdrawals.push({ userId: u._id, cpf: u.cpf, amount: t.amount, pixKey: u.pixKey, pixType: u.pixKeyType, date: t.createdAt, transId: t._id });
                 }
             });
         });
 
-        // Ordena afiliados
         topAffiliates.sort((a,b) => b.earnings - a.earnings);
 
         res.json({ 
-            totalUsers, 
-            totalBalance, 
-            pendingWithdrawals,
-            financials: {
-                deposited: totalDeposited,
-                withdrawn: totalWithdrawn,
-                profit: totalDeposited - totalWithdrawn
-            },
-            topAffiliates: topAffiliates.slice(0, 10) // Top 10
+            totalUsers, totalBalance, pendingWithdrawals,
+            financials: { deposited: totalDeposited, withdrawn: totalWithdrawn, profit: totalDeposited - totalWithdrawn },
+            topAffiliates: topAffiliates.slice(0, 10) 
         });
-    } catch(e) {
-        res.status(500).json({ error: "Erro admin" });
-    }
+    } catch(e) { res.status(500).json({ error: "Erro admin" }); }
 });
 
-// 2. Lista de Todos os Usuários (Com Busca)
+// CONFIGURAÇÕES (LER)
+app.get('/api/admin/settings', async (req, res) => {
+    const { secret } = req.headers;
+    if(secret !== 'admin123') return res.status(403).json({ error: "Negado" });
+    const settings = await Settings.findOne();
+    res.json(settings);
+});
+
+// CONFIGURAÇÕES (ATUALIZAR)
+app.post('/api/admin/settings', async (req, res) => {
+    const { secret, dailyBonus } = req.body;
+    if(secret !== 'admin123') return res.status(403).json({ error: "Negado" });
+    
+    const settings = await Settings.findOne();
+    if(settings) {
+        settings.dailyBonus = parseFloat(dailyBonus);
+        await settings.save();
+    }
+    res.json({ message: "Configurações atualizadas!" });
+});
+
 app.post('/api/admin/users', async (req, res) => {
     const { secret, search } = req.body;
     if(secret !== 'admin123') return res.status(403).json({ error: "Negado" });
-
     try {
         let query = {};
-        if(search) query = { cpf: { $regex: search, $options: 'i' } }; // Busca por CPF
-        
+        if(search) query = { cpf: { $regex: search, $options: 'i' } };
         const users = await User.find(query, 'name cpf balance isBanned phone').limit(50);
         res.json(users);
     } catch(e) { res.status(500).json({ error: "Erro lista users" }); }
 });
 
-// 3. Ação Admin (Saque)
 app.post('/api/admin/action', async (req, res) => {
     const { userId, transId, action, secret } = req.body;
     if(secret !== 'admin123') return res.status(403).json({ error: "Negado" });
@@ -297,22 +312,17 @@ app.post('/api/admin/action', async (req, res) => {
     res.json({ message: "Sucesso!" });
 });
 
-// 4. Gestão de Usuário (Editar Saldo / Banir)
 app.post('/api/admin/user/update', async (req, res) => {
     const { userId, newBalance, isBanned, secret } = req.body;
     if(secret !== 'admin123') return res.status(403).json({ error: "Negado" });
-
     try {
         const user = await User.findById(userId);
         if(!user) return res.status(404).json({ error: "User not found" });
-
         if(newBalance !== undefined) {
-            // Registra ajuste no histórico
             user.transactions.push({ type: 'admin_adjustment', amount: parseFloat(newBalance) - user.balance, status: 'approved', mpPaymentId: 'ADMIN', createdAt: Date.now() });
             user.balance = parseFloat(newBalance);
         }
         if(isBanned !== undefined) user.isBanned = isBanned;
-
         await user.save();
         res.json({ message: "Usuário atualizado!" });
     } catch(e) { res.status(500).json({ error: "Erro update user" }); }
