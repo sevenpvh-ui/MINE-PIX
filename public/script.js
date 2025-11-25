@@ -266,17 +266,22 @@ async function playRound(index, cellBtn) {
 }
 
 function finishGame(win, amount, fullGrid) {
-    // RESET FORÇADO DO BOTÃO
+    // --- CORREÇÃO CRÍTICA: RESET DO BOTÃO PRIMEIRO ---
     isPlaying = false; 
     btn.innerText = "COMEÇAR JOGO"; 
-    btn.classList.remove('cashout-mode'); 
+    btn.classList.remove('cashout-mode');
+    btn.disabled = false; // Garante que o botão não fique travado
     updateBalance();
     
-    const cells = document.querySelectorAll('.cell');
-    fullGrid.forEach((type, i) => {
-        cells[i].disabled = true; cells[i].classList.add('revealed');
-        if(type === 'mine') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="bomb.png" style="width:95%; transform:scale(1.5); opacity:0.5">';
-        if(type === 'diamond') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="diamond.png" style="width:95%; transform:scale(1.5); opacity:0.5">';
-    });
+    // Tenta revelar o grid, se der erro, o botão já está salvo
+    try {
+        const cells = document.querySelectorAll('.cell');
+        fullGrid.forEach((type, i) => {
+            cells[i].disabled = true; cells[i].classList.add('revealed');
+            if(type === 'mine') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="bomb.png" style="width:95%; transform:scale(1.5); opacity:0.5">';
+            if(type === 'diamond') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="diamond.png" style="width:95%; transform:scale(1.5); opacity:0.5">';
+        });
+    } catch(e) { console.error("Erro ao revelar grid", e); }
+
     if(win) { playSound('win'); showToast(`GANHOU R$ ${amount}!`); confetti(); } else { showToast("Você perdeu!", 'error'); }
 }
