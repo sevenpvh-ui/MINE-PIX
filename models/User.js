@@ -1,10 +1,14 @@
 const mongoose = require('mongoose');
 
 const UserSchema = new mongoose.Schema({
+    // Novos campos obrigatórios
+    name: { type: String, required: true },
+    phone: { type: String, required: true },
+    
     cpf: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     balance: { type: Number, default: 0.00 },
-    lastDailyBonus: { type: Date, default: null }, // Controle do Bônus
+    lastDailyBonus: { type: Date, default: null },
 
     pixKey: { type: String, default: '' },
     pixKeyType: { type: String, default: '' },
