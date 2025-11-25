@@ -163,10 +163,12 @@ async function playRound(index, cellBtn) {
     const res = await fetch('/api/game/play', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({userId: currentUser.userId, index}) });
     const data = await res.json();
     if(data.status === 'safe') {
-        cellBtn.innerHTML = '<img src="diamond.png" style="width:70%;" onerror="this.parentNode.innerText=\'💎\'">';
+        // AQUI MUDAMOS PARA 95%
+        cellBtn.innerHTML = '<img src="diamond.png" style="width:95%; drop-shadow: 0 0 5px #00e701;" onerror="this.parentNode.innerText=\'💎\'">';
         cellBtn.classList.add('revealed', 'safe'); cellBtn.disabled = true; multEl.innerText = `${data.multiplier}x`; btn.innerText = `RETIRAR R$ ${data.potentialWin}`;
     } else if(data.status === 'boom') {
-        cellBtn.innerHTML = '<img src="bomb.png" style="width:70%;" onerror="this.parentNode.innerText=\'💣\'">';
+        // AQUI MUDAMOS PARA 95%
+        cellBtn.innerHTML = '<img src="bomb.png" style="width:95%;" onerror="this.parentNode.innerText=\'💣\'">';
         cellBtn.classList.add('boom'); document.getElementById('grid-container').classList.add('shake-anim');
         setTimeout(()=> document.getElementById('grid-container').classList.remove('shake-anim'), 400);
         finishGame(false, 0, data.grid);
@@ -178,8 +180,10 @@ function finishGame(win, amount, fullGrid) {
     const cells = document.querySelectorAll('.cell');
     fullGrid.forEach((type, i) => {
         cells[i].disabled = true; cells[i].classList.add('revealed');
-        if(type === 'mine') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="bomb.png" style="width:70%; opacity:0.5">';
-        if(type === 'diamond') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="diamond.png" style="width:70%; opacity:0.5">';
+        // AQUI MUDAMOS PARA 95%
+        if(type === 'mine') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="bomb.png" style="width:95%; opacity:0.5">';
+        // AQUI MUDAMOS PARA 95%
+        if(type === 'diamond') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="diamond.png" style="width:95%; opacity:0.5">';
     });
     if(win) { msgEl.innerHTML = `<span style="color:#00e701">GANHOU R$ ${amount}</span>`; confetti(); } else { msgEl.innerHTML = `<span style="color:red">PERDEU!</span>`; }
 }
