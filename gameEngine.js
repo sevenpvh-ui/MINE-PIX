@@ -11,7 +11,8 @@ function createGrid(minesCount) {
     return grid;
 }
 
-function calculateMultiplier(mines, openedSpots) {
+// AGORA RECEBE A MARGEM DA CASA (houseEdge)
+function calculateMultiplier(mines, openedSpots, houseEdge = 0.95) {
     const totalSpots = 25;
     const remainingSpots = totalSpots - openedSpots;
     const remainingSafe = remainingSpots - mines;
@@ -19,7 +20,8 @@ function calculateMultiplier(mines, openedSpots) {
     if (remainingSafe <= 0) return 0;
 
     const probability = remainingSafe / remainingSpots;
-    const houseEdge = 0.85; // 15% de margem da casa
+    
+    // O multiplicador é ajustado pelo lucro que você definiu no Admin
     return houseEdge / probability;
 }
 
