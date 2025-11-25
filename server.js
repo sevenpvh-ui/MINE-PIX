@@ -28,43 +28,17 @@ const payment = new Payment(client);
 // --- AUTENTICAÇÃO ---
 
 app.post('/api/auth/register', async (req, res) => {
-    const { name, cpf, phone, password, refCode } = req.body; // Recebe refCode opcional
+    const { name, cpf, phone, password } = req.body;
     try {
-        if (!name || !cpf || !phone || !password) return res.status(400).json({ error: "Preencha tudo" });
-        
-        const cleanCpf = cpf.replace(/\D/g, '');
+        if (!name || !cpf || !phone || !password) return res.status(400).json({ error: "Preencha todos os campos!" });
+        const cleanCpf = cpf.replace(/\D/g, ''); 
         if (await User.findOne({ cpf: cleanCpf })) return res.status(400).json({ error: "CPF já cadastrado" });
-
-        // Lógica de Afiliado
-        let referrerId = null;
-        if (refCode) {
-            const referrer = await User.findOne({ affiliateCode: refCode });
-            if (referrer) {
-                referrerId = referrer._id;
-                referrer.referralCount += 1;
-                await referrer.save();
-            }
-        }
-
-        // Gera código único para o novo usuário (ex: mina-x8z1)
-        const newAffiliateCode = 'mina-' + Math.random().toString(36).substring(2, 7);
-
-        const hashedPassword = await bcrypt.hash(password, 10);
         
-        const user = await User.create({ 
-            name, 
-            phone, 
-            cpf: cleanCpf, 
-            password: hashedPassword,
-            affiliateCode: newAffiliateCode,
-            referredBy: referrerId
-        });
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const user = await User.create({ name, phone, cpf: cleanCpf, password: hashedPassword });
         
         res.json({ message: "Criado", userId: user._id, cpf: user.cpf, balance: user.balance });
-    } catch (e) { 
-        console.error(e);
-        res.status(500).json({ error: "Erro ao registrar" }); 
-    }
+    } catch (e) { res.status(500).json({ error: "Erro ao registrar" }); }
 });
 
 app.post('/api/auth/login', async (req, res) => {
@@ -79,6 +53,29 @@ app.post('/api/auth/login', async (req, res) => {
     } catch (e) { res.status(500).json({ error: "Erro ao logar" }); }
 });
 
+// NOVA ROTA: RECUPERAR SENHA
+app.post('/api/auth/reset-password', async (req, res) => {
+    const { cpf, phone, name, newPassword } = req.body;
+    try {
+        const cleanCpf = cpf.replace(/\D/g, '');
+        const user = await User.findOne({ cpf: cleanCpf });
+
+        if (!user) return res.status(404).json({ error: "CPF não encontrado" });
+
+        // Validação de Segurança (Dados devem ser idênticos)
+        if (user.phone !== phone || user.name.trim().toLowerCase() !== name.trim().toLowerCase()) {
+            return res.status(400).json({ error: "Dados de confirmação incorretos!" });
+        }
+
+        // Troca a senha
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        user.password = hashedPassword;
+        await user.save();
+
+        res.json({ message: "Senha alterada com sucesso!" });
+    } catch (e) { res.status(500).json({ error: "Erro ao alterar senha" }); }
+});
+
 app.get('/api/me/:userId', async (req, res) => {
     try {
         const user = await User.findById(req.params.userId);
@@ -87,51 +84,13 @@ app.get('/api/me/:userId', async (req, res) => {
     } catch (e) { res.status(500).json({ error: "Erro" }); }
 });
 
-// --- AFILIADOS (NOVO) ---
-app.get('/api/affiliates/stats/:userId', async (req, res) => {
-    try {
-        const user = await User.findById(req.params.userId);
-        if(!user) return res.status(404).json({error: "User not found"});
-        
-        res.json({
-            code: user.affiliateCode,
-            earnings: user.affiliateEarnings,
-            count: user.referralCount,
-            link: `${SITE_URL}?ref=${user.affiliateCode}` // Link pronto
-        });
-    } catch(e) { res.status(500).json({error: "Erro stats"}); }
-});
-
-// Função auxiliar para pagar comissão (10%)
-async function payCommission(userId, amount) {
-    try {
-        const user = await User.findById(userId).populate('referredBy');
-        if (user && user.referredBy) {
-            const referrer = user.referredBy;
-            const commission = amount * 0.10; // 10% de comissão
-            
-            referrer.balance += commission;
-            referrer.affiliateEarnings += commission;
-            referrer.transactions.push({
-                type: 'commission',
-                amount: commission,
-                status: 'approved',
-                mpPaymentId: `COM_${user.name}_${Date.now()}`,
-                createdAt: Date.now()
-            });
-            await referrer.save();
-            console.log(`💰 Comissão de R$ ${commission} paga para ${referrer.name}`);
-        }
-    } catch (e) { console.error("Erro ao pagar comissão", e); }
-}
-
 // --- FINANCEIRO ---
 app.post('/api/payment/deposit', async (req, res) => {
     const { userId, amount } = req.body;
     try {
         const user = await User.findById(userId);
         const fakeEmail = `${user.cpf}@minespix.com`;
-        const body = { transaction_amount: parseFloat(amount), description: 'Creditos Mines', payment_method_id: 'pix', payer: { email: fakeEmail }, notification_url: `${SITE_URL}/api/webhook` };
+        const body = { transaction_amount: parseFloat(amount), description: 'Creditos Mines Pix', payment_method_id: 'pix', payer: { email: fakeEmail }, notification_url: `${SITE_URL}/api/webhook` };
         const result = await payment.create({ body });
         user.transactions.push({ type: 'deposit', amount: parseFloat(amount), status: 'pending', mpPaymentId: result.id.toString(), qrCodeBase64: result.point_of_interaction.transaction_data.qr_code_base64 });
         await user.save();
@@ -139,7 +98,6 @@ app.post('/api/payment/deposit', async (req, res) => {
     } catch (e) { res.status(500).json({ error: "Erro PIX" }); }
 });
 
-// Depósito Simulado (COM COMISSÃO)
 app.post('/api/debug/deposit', async (req, res) => {
     const { userId, amount } = req.body;
     try {
@@ -148,15 +106,10 @@ app.post('/api/debug/deposit', async (req, res) => {
         user.balance += valor;
         user.transactions.push({ type: 'deposit', amount: valor, status: 'approved', mpPaymentId: 'SIM_' + Date.now() });
         await user.save();
-        
-        // Paga comissão se tiver afiliado
-        await payCommission(userId, valor);
-
         res.json({ message: "Simulado!", balance: user.balance });
     } catch (e) { res.status(500).json({ error: "Erro simulação" }); }
 });
 
-// Webhook (COM COMISSÃO)
 app.post('/api/webhook', async (req, res) => {
     const { action, data } = req.body;
     if (action === 'payment.created' || action === 'payment.updated') {
@@ -170,9 +123,6 @@ app.post('/api/webhook', async (req, res) => {
                         trans.status = 'approved';
                         user.balance += trans.amount;
                         await user.save();
-                        
-                        // Paga comissão
-                        await payCommission(user._id, trans.amount);
                     }
                 }
             }
@@ -195,9 +145,7 @@ app.post('/api/payment/withdraw', async (req, res) => {
     } catch (e) { res.status(500).json({ error: "Erro saque" }); }
 });
 
-// ... Rotas Bônus, Histórico, Admin e Jogo mantidas iguais (apenas copie do anterior se precisar, ou mantenha) ...
-// Para economizar espaço, vou reenviar apenas as rotas que não mudaram de forma resumida, mas no seu arquivo final mantenha tudo.
-
+// --- EXTRAS ---
 app.post('/api/bonus/daily', async (req, res) => {
     const { userId } = req.body;
     try {
@@ -210,7 +158,7 @@ app.post('/api/bonus/daily', async (req, res) => {
         user.transactions.push({ type: 'bonus', amount: 1.00, status: 'approved', mpPaymentId: 'BONUS_' + Date.now() });
         await user.save();
         res.json({ message: "Bônus resgatado!", balance: user.balance });
-    } catch (e) { res.status(500).json({ error: "Erro" }); }
+    } catch (e) { res.status(500).json({ error: "Erro bônus" }); }
 });
 
 app.get('/api/me/transactions/:userId', async (req, res) => {
@@ -218,10 +166,10 @@ app.get('/api/me/transactions/:userId', async (req, res) => {
         const user = await User.findById(req.params.userId);
         const history = user.transactions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 20);
         res.json(history);
-    } catch (e) { res.status(500).json({ error: "Erro" }); }
+    } catch (e) { res.status(500).json({ error: "Erro histórico" }); }
 });
 
-// Rotas Admin
+// --- ADMIN ---
 app.get('/api/admin/dashboard', async (req, res) => {
     const { secret } = req.headers;
     if(secret !== 'admin123') return res.status(403).json({ error: "Negado" });
@@ -247,7 +195,7 @@ app.post('/api/admin/action', async (req, res) => {
     res.json({ message: "Sucesso!" });
 });
 
-// Rotas Jogo
+// --- JOGO ---
 app.post('/api/game/start', async (req, res) => {
     const { userId, betAmount, minesCount } = req.body;
     try {
