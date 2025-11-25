@@ -9,14 +9,57 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     
     <style>
-        /* ESTILOS MANTIDOS DA VERSÃO ANTERIOR */
-        :root { --bg-dark: #0f1923; --bg-sidebar: #1a242d; --card-bg: #212d38; --accent: #00e701; --accent-hover: #00c901; --danger: #ff4d4d; --text-muted: #b1bad3; --white: #ffffff; }
+        :root { 
+            --bg-dark: #0f1923; 
+            --bg-sidebar: #1a242d; 
+            --card-bg: #212d38;
+            --accent: #00e701; 
+            --accent-hover: #00c901;
+            --danger: #ff4d4d; 
+            --text-muted: #b1bad3; 
+            --white: #ffffff;
+        }
+
         * { box-sizing: border-box; }
-        body { margin: 0; background-color: var(--bg-dark); color: var(--white); font-family: 'Inter', sans-serif; display: flex; height: 100vh; overflow: hidden; }
+
+        body { 
+            margin: 0; 
+            background-color: var(--bg-dark); 
+            color: var(--white); 
+            font-family: 'Inter', sans-serif; 
+            display: flex; 
+            height: 100vh; 
+            overflow: hidden; 
+        }
         
+        /* CORREÇÃO DO SELECT (LISTA BRANCA) */
+        select {
+            background-color: var(--bg-dark);
+            color: white;
+            color-scheme: dark; /* Força o navegador a usar tema escuro no dropdown */
+        }
+        
+        select option {
+            background-color: #1a242d;
+            color: white;
+            padding: 10px;
+        }
+
         /* SIDEBAR */
-        .sidebar { width: 280px; background-color: var(--bg-sidebar); padding: 20px; display: flex; flex-direction: column; gap: 15px; border-right: 1px solid rgba(255,255,255,0.05); z-index: 10; overflow-y: auto; }
+        .sidebar { 
+            width: 280px; 
+            background-color: var(--bg-sidebar); 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px; 
+            border-right: 1px solid rgba(255,255,255,0.05);
+            z-index: 10; 
+            overflow-y: auto; 
+        }
+
         .logo-area { font-size: 26px; font-weight: 900; margin-bottom: 20px; letter-spacing: -1px; }
+        
         .user-card { background: var(--card-bg); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
         .user-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 13px; color: var(--text-muted); }
         .user-card-name { font-weight: bold; color: var(--white); }
@@ -76,6 +119,10 @@
         .pix-type-btn:hover { background: rgba(255,255,255,0.05); }
         .pix-type-btn.active { background: rgba(0, 231, 1, 0.1); border-color: var(--accent); color: var(--accent); }
 
+        /* AFFILIATE */
+        .affiliate-link-container { display: flex; gap: 5px; margin-bottom: 20px; }
+        .affiliate-link-input { background: #0b1219 !important; text-align: center; font-size: 12px; color: white !important; border: 1px solid #333 !important; }
+
         .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
         .toast { background: #1a242d; color: white; padding: 15px 20px; border-radius: 8px; display: flex; align-items: center; gap: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); animation: slideIn 0.3s ease-out; min-width: 250px; border-left: 4px solid #00e701; }
         .toast.error { border-left-color: #ff4d4d; }
@@ -106,7 +153,14 @@
         @keyframes pulseGreen { 0% { transform: scale(1); text-shadow: 0 0 15px rgba(0, 231, 1, 0.6); } 50% { transform: scale(1.1); text-shadow: 0 0 30px rgba(0, 231, 1, 1); } 100% { transform: scale(1); } }
         @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes slideLeft { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
-        @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-5px);} 75% {transform: translateX(5px);} }
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); } 30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); } 50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); } 70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); } 90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
         .shake-anim { animation: shake 0.5s; border: 2px solid #ff4d4d !important; }
 
         @media (max-width: 768px) {
@@ -124,7 +178,6 @@
 <body>
 
     <div class="toast-container" id="toast-container"></div>
-
     <a href="#" class="support-float" onclick="openModal('support-modal')">💬</a>
 
     <div id="welcome-modal" class="overlay hidden">
@@ -146,9 +199,12 @@
     <div id="affiliate-modal" class="overlay hidden">
         <div class="modal">
             <h2>🤝 Indique e Ganhe</h2>
+            <p style="color:#b1bad3">Ganhe 10% de comissão vitalícia.</p>
             <div class="user-card" style="margin-bottom:15px; text-align:center"><div style="color:#b1bad3;font-size:11px;margin-bottom:5px">GANHOS TOTAIS</div><div class="affiliate-val" style="font-size:28px;color:var(--accent);font-weight:900" id="aff-earnings">R$ 0.00</div></div>
-            <input type="text" id="aff-link" readonly style="background:#0b1219; text-align:center; font-size:12px; margin-bottom:10px;">
-            <button class="btn-main btn-primary" onclick="copyAffiliateLink()">COPIAR LINK</button>
+            <div class="affiliate-link-container">
+                <input type="text" id="aff-link" readonly class="affiliate-link-input" value="Carregando...">
+                <button class="btn-main btn-primary" style="width: 80px; margin: 0;" onclick="copyAffiliateLink()">COPIAR</button>
+            </div>
             <button class="btn-main btn-outline" style="margin-top:10px" onclick="closeModal('affiliate-modal')">FECHAR</button>
         </div>
     </div>
@@ -158,27 +214,7 @@
     <div id="recover-modal" class="overlay hidden"><div class="modal"><h2>🔑 Recuperar</h2><input type="tel" id="rec-cpf" placeholder="CPF"><input type="text" id="rec-name" placeholder="Nome"><input type="tel" id="rec-phone" placeholder="Telefone"><input type="password" id="rec-newpass" placeholder="Nova Senha"><button class="btn-main btn-primary" onclick="resetPassword()">ALTERAR SENHA</button><div style="margin-top:15px"><span onclick="showLogin()" style="cursor:pointer;color:var(--text-muted)">Voltar</span></div></div></div>
 
     <div id="deposit-modal" class="overlay hidden"><div class="modal"><h2>💰 Depositar</h2><input type="number" id="dep-amount" placeholder="Valor (Ex: 20.00)"><button class="btn-main btn-primary" onclick="generatePix()">GERAR PIX</button><button class="btn-main" style="background:#00a8ff;margin-top:10px" onclick="simulateDeposit()">⚡ SIMULAR</button><div id="pix-area" class="hidden" style="margin-top:15px"><img id="qr-img" src="" style="width:200px;border:2px solid white;border-radius:8px"><br><button class="btn-main btn-outline" style="margin-top:10px" onclick="copyPix()">COPIAR CÓDIGO</button></div><button class="close-btn" onclick="closeModal('deposit-modal')">FECHAR</button></div></div>
-    
-    <div id="withdraw-modal" class="overlay hidden">
-        <div class="modal">
-            <h2>💸 Sacar</h2>
-            <div class="input-group"><label>Valor do Saque</label><input type="number" id="with-amount" placeholder="R$ 0,00"></div>
-            <div class="input-group">
-                <label>Tipo de Chave</label>
-                <div class="pix-selector">
-                    <button class="pix-type-btn active" onclick="selectPixType('cpf')">CPF</button>
-                    <button class="pix-type-btn" onclick="selectPixType('email')">E-mail</button>
-                    <button class="pix-type-btn" onclick="selectPixType('phone')">Tel</button>
-                    <button class="pix-type-btn" onclick="selectPixType('random')">Chave</button>
-                </div>
-                <input type="hidden" id="pix-type" value="cpf">
-            </div>
-            <div class="input-group"><label>Chave PIX</label><input type="text" id="pix-key" placeholder="Digite sua chave"></div>
-            <button class="btn-main btn-primary" onclick="requestWithdraw()">SOLICITAR SAQUE</button>
-            <button class="close-btn" onclick="closeModal('withdraw-modal')">FECHAR</button>
-        </div>
-    </div>
-
+    <div id="withdraw-modal" class="overlay hidden"><div class="modal"><h2>💸 Sacar</h2><input type="number" id="with-amount" placeholder="Valor"><div class="input-group"><label>Tipo de Chave</label><div class="pix-selector"><button class="pix-type-btn active" onclick="selectPixType('cpf')">CPF</button><button class="pix-type-btn" onclick="selectPixType('email')">E-mail</button><button class="pix-type-btn" onclick="selectPixType('phone')">Tel</button><button class="pix-type-btn" onclick="selectPixType('random')">Chave</button></div><input type="hidden" id="pix-type" value="cpf"></div><div class="input-group"><label>Chave PIX</label><input type="text" id="pix-key" placeholder="Digite sua chave"></div><button class="btn-main btn-primary" onclick="requestWithdraw()">SOLICITAR SAQUE</button><button class="close-btn" onclick="closeModal('withdraw-modal')">FECHAR</button></div></div>
     <div id="profile-modal" class="overlay hidden"><div class="modal" style="max-width:500px"><h2>📜 Extrato</h2><div style="max-height:300px;overflow-y:auto"><table style="width:100%;font-size:12px;text-align:left;color:#b1bad3"><thead><tr><th>Tipo</th><th>Valor</th><th>Status</th><th>Data</th></tr></thead><tbody id="transaction-list"></tbody></table></div><button class="btn-main btn-outline" style="margin-top:10px" onclick="closeModal('profile-modal')">FECHAR</button></div></div>
 
     <div class="sidebar">
