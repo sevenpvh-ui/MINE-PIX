@@ -1,0 +1,123 @@
+📘 MANUAL DE INSTALAÇÃO - MINES PIX PRO
+Parabéns pela aquisição! Você tem em mãos uma plataforma de iGaming de alta performance desenvolvida em Node.js. Siga este guia para colocar seu sistema no ar em poucos minutos.
+
+🛠️ 1. PRÉ-REQUISITOS
+Antes de começar, você precisará de:
+
+Node.js instalado: Baixe a versão recomendada (LTS) em nodejs.org.
+
+Editor de Código: Recomendamos o VS Code.
+
+Contas (Grátis):
+
+MongoDB Atlas (Para o Banco de Dados).
+
+Mercado Pago Developers (Para receber os Pix).
+
+🗄️ 2. CONFIGURANDO O BANCO DE DADOS (MongoDB)
+O sistema usa o MongoDB para salvar usuários e saldo. Vamos usar a versão em nuvem (Grátis e Segura).
+
+Acesse mongodb.com/atlas e crie uma conta.
+
+Crie um Cluster Gratuito (M0).
+
+Vá em Database Access (menu lateral) e crie um usuário.
+
+Exemplo: Usuário: admin, Senha: suasenha123 (Anote essa senha!).
+
+Vá em Network Access e adicione um IP.
+
+Selecione "Allow Access from Anywhere" (IP 0.0.0.0/0) para garantir que o site funcione em qualquer hospedagem.
+
+Volte em Database, clique em Connect > Drivers.
+
+Copie a Connection String. Ela se parece com isso: mongodb+srv://admin:<password>@cluster0.Exemplo.mongodb.net/?retryWrites=true&w=majority
+
+Importante: Substitua <password> pela senha que você criou no passo 3.
+
+💸 3. CONFIGURANDO O PAGAMENTO (Mercado Pago)
+Para o PIX automático funcionar:
+
+Acesse mercadopago.com.br/developers e faça login.
+
+Clique em Suas Integrações > Criar Aplicação.
+
+Dê um nome (ex: "Mines Game") e selecione "Pagamentos Online".
+
+Após criar, vá em Credenciais de Produção.
+
+Copie o Access Token. Ele começa com APP_USR-....
+
+⚙️ 4. INSTALAÇÃO E CONFIGURAÇÃO DO CÓDIGO
+Agora vamos conectar tudo no código.
+
+Extraia a pasta do projeto no seu computador.
+
+Abra a pasta no VS Code.
+
+Abra o terminal do VS Code e digite o comando para baixar as bibliotecas:
+
+Bash
+
+npm install
+Crie um arquivo novo na raiz do projeto chamado .env (ponto env).
+
+Abra esse arquivo .env e cole o seguinte (preenchendo com seus dados):
+
+Snippet de código
+
+PORT=3000
+MONGO_URI=Cole_Sua_String_Do_Mongo_Aqui
+MP_ACCESS_TOKEN=Cole_Seu_Token_Do_Mercado_Pago_Aqui
+SITE_URL=https://seu-site.onrender.com
+Atenção no SITE_URL: Se estiver testando no computador, pode deixar http://localhost:3000. Quando colocar na internet (Render), mude para o link real do seu site. Isso é obrigatório para o PIX ser aprovado automaticamente.
+
+🚀 5. RODANDO O PROJETO
+No seu Computador (Teste):
+No terminal, digite:
+
+Bash
+
+npm start
+Se aparecer "🔥 Online na porta 3000" e "✅ MongoDB Conectado", parabéns! Acesse http://localhost:3000 no seu navegador.
+
+Na Internet (Hospedagem Grátis no Render.com):
+Crie uma conta no render.com.
+
+Clique em New + > Web Service.
+
+Conecte seu repositório do GitHub onde está o código.
+
+Nas configurações do Render:
+
+Build Command: npm install
+
+Start Command: node server.js
+
+Vá na aba Environment e adicione as mesmas variáveis que colocou no arquivo .env (MONGO_URI, MP_ACCESS_TOKEN, SITE_URL).
+
+Clique em Deploy.
+
+🕵️‍♂️ 6. PAINEL ADMINISTRATIVO
+Para gerenciar saques e ver o lucro, acesse a área secreta:
+
+Link: seu-site.com/admin.html
+
+Senha Padrão: admin123
+
+(Recomendamos alterar a senha no arquivo server.js e public/admin.html buscando por "admin123").
+
+❓ RESOLUÇÃO DE PROBLEMAS COMUNS
+Erro: "MongoServerError: bad auth"
+
+Você errou a senha do banco de dados na MONGO_URI. Verifique se removeu os símbolos < e >.
+
+Erro: Pix não aprova automático
+
+Verifique se o SITE_URL no .env está correto (sem barra no final). O Mercado Pago precisa desse link para avisar que o pagamento caiu.
+
+O site não abre no Render
+
+Verifique a aba "Logs" no painel do Render para ver o erro específico. Geralmente é alguma variável de ambiente faltando.
+
+Boa sorte e bons lucros! 🚀
