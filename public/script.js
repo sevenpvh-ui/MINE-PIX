@@ -3,7 +3,6 @@ let isPlaying = false;
 
 const gridEl = document.getElementById('grid');
 const balanceEl = document.getElementById('balance');
-const msgEl = document.getElementById('message-display');
 const multEl = document.getElementById('multiplier-display');
 const btn = document.getElementById('action-btn');
 const trendEl = document.getElementById('trend-bar');
@@ -224,7 +223,7 @@ async function loadTransactions() {
     });
 }
 
-// FUNÇÃO DE DEPÓSITO COM DEBUG (ATUALIZADA)
+// FUNÇÃO DE DEPÓSITO OTIMIZADA COM AUTO-FECHAMENTO
 async function generatePix() {
     playSound('click');
     const amount = document.getElementById('dep-amount').value;
@@ -243,38 +242,47 @@ async function generatePix() {
             body: JSON.stringify({ userId: currentUser.userId, amount }) 
         });
 
-        console.log("Status da resposta:", res.status); 
-
-        // Tenta ler o JSON. Se o servidor devolveu erro HTML (comum), vai falhar aqui e cair no catch
+        console.log("Status:", res.status); 
         const data = await res.json();
-        console.log("Dados recebidos:", data); 
 
         if(res.ok) {
             document.getElementById('pix-area').classList.remove('hidden');
             document.getElementById('qr-img').src = `data:image/jpeg;base64,${data.qrCodeBase64}`;
             document.getElementById('copy-paste').value = data.copyPaste;
             
-            // Inicia verificação de saldo
-            setInterval(async () => { await updateBalance(); }, 5000);
+            // LÓGICA DE AUTO-APROVAÇÃO
+            let initialBalance = parseFloat(balanceEl.innerText);
+            let checkCount = 0;
+            
+            // Verifica a cada 3 segundos se o saldo mudou
+            const checkInterval = setInterval(async () => { 
+                await updateBalance(); 
+                let currentBalance = parseFloat(balanceEl.innerText);
+                
+                // Se o saldo aumentou, fecha o modal e faz festa
+                if(currentBalance > initialBalance) {
+                    clearInterval(checkInterval);
+                    closeModal('deposit-modal');
+                    playSound('win');
+                    showToast("Pagamento Confirmado!", 'success');
+                    confetti();
+                }
+                
+                // Para de verificar depois de 5 minutos para não travar
+                checkCount++;
+                if(checkCount > 100) clearInterval(checkInterval);
+            }, 3000);
+
         } else { 
-            console.error("Erro retornado pela API:", data.error); 
             showToast(data.error || "Erro desconhecido", 'error'); 
         }
     } catch(e) { 
-        console.error("ERRO CRÍTICO NO FRONTEND:", e); 
-        showToast("Erro Técnico: Veja o Console (F12)", 'error'); 
+        console.error("ERRO:", e); 
+        showToast("Erro Técnico", 'error'); 
     }
     finally { 
         setLoading(payBtn, false); 
     }
-}
-
-async function simulateDeposit() {
-    playSound('click');
-    const amount = document.getElementById('dep-amount').value;
-    if(!amount || amount <= 0) return showToast("Valor inválido", 'error');
-    const res = await fetch('/api/debug/deposit', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: currentUser.userId, amount }) });
-    if(res.ok) { playSound('win'); showToast("✅ Simulado!"); updateBalance(); closeModal('deposit-modal'); } else { showToast("Erro", 'error'); }
 }
 
 function copyPix() { playSound('click'); const c=document.getElementById("copy-paste"); c.select(); document.execCommand("copy"); showToast("Copiado!"); }
