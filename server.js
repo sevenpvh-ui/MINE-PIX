@@ -13,7 +13,7 @@ const Settings = require('./models/Settings');
 const app = express();
 
 // --- TRAVA DE DOMÍNIO ---
-const DOMINIO_AUTORIZADO = "mine-pix.onrender.com"; // Mude para o site do cliente
+const DOMINIO_AUTORIZADO = "mines-pix.onrender.com"; // Mude para o site do cliente
 app.use((req, res, next) => {
     const host = req.get('host');
     if (!host.includes(DOMINIO_AUTORIZADO) && !host.includes("localhost")) {
