@@ -9,64 +9,24 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     
     <style>
-        :root { 
-            --bg-dark: #0f1923; 
-            --bg-sidebar: #1a242d; 
-            --card-bg: #212d38;
-            --accent: #00e701; 
-            --accent-hover: #00c901;
-            --danger: #ff4d4d; 
-            --text-muted: #b1bad3; 
-            --white: #ffffff;
-        }
-
+        :root { --bg-dark: #0f1923; --bg-sidebar: #1a242d; --card-bg: #212d38; --accent: #00e701; --accent-hover: #00c901; --danger: #ff4d4d; --text-muted: #b1bad3; --white: #ffffff; }
         * { box-sizing: border-box; }
-
-        body { 
-            margin: 0; 
-            background-color: var(--bg-dark); 
-            color: var(--white); 
-            font-family: 'Inter', sans-serif; 
-            display: flex; 
-            height: 100vh; 
-            overflow: hidden; 
-        }
+        body { margin: 0; background-color: var(--bg-dark); color: var(--white); font-family: 'Inter', sans-serif; display: flex; height: 100vh; overflow: hidden; }
         
-        /* CORREÇÃO DO SELECT (LISTA BRANCA) */
-        select {
-            background-color: var(--bg-dark);
-            color: white;
-            color-scheme: dark; /* Força o navegador a usar tema escuro no dropdown */
-        }
-        
-        select option {
-            background-color: #1a242d;
-            color: white;
-            padding: 10px;
-        }
+        /* CORREÇÃO SELECT ESCURO */
+        select { background-color: var(--bg-dark); color: white; color-scheme: dark; }
+        select option { background-color: #1a242d; color: white; padding: 10px; }
 
         /* SIDEBAR */
-        .sidebar { 
-            width: 280px; 
-            background-color: var(--bg-sidebar); 
-            padding: 20px; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 15px; 
-            border-right: 1px solid rgba(255,255,255,0.05);
-            z-index: 10; 
-            overflow-y: auto; 
-        }
-
+        .sidebar { width: 280px; background-color: var(--bg-sidebar); padding: 20px; display: flex; flex-direction: column; gap: 15px; border-right: 1px solid rgba(255,255,255,0.05); z-index: 10; overflow-y: auto; }
         .logo-area { font-size: 26px; font-weight: 900; margin-bottom: 20px; letter-spacing: -1px; }
-        
         .user-card { background: var(--card-bg); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
         .user-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 13px; color: var(--text-muted); }
         .user-card-name { font-weight: bold; color: var(--white); }
         .btn-extrato { background: rgba(255,255,255,0.1); border: none; color: var(--text-muted); padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 10px; font-weight: bold; transition: 0.2s;}
         .btn-extrato:hover { background: rgba(255,255,255,0.2); color: white; }
 
-        /* BUTTONS */
+        /* BUTTONS & INPUTS */
         .btn-main { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: 800; font-size: 14px; cursor: pointer; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.5px; }
         .btn-primary { background-color: var(--accent); color: #000; }
         .btn-primary:hover { background-color: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0, 231, 1, 0.3); }
@@ -74,8 +34,6 @@
         .btn-bonus:hover { filter: brightness(1.1); transform: translateY(-2px); }
         .btn-outline { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: var(--text-muted); }
         .btn-outline:hover { border-color: var(--white); color: var(--white); }
-
-        /* INPUTS */
         .input-group { margin-bottom: 15px; }
         .input-group label { font-size: 11px; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; display: block; text-transform: uppercase; }
         .input-wrapper { display: flex; background: var(--bg-dark); border-radius: 8px; padding: 5px; border: 1px solid rgba(255,255,255,0.1); }
@@ -120,8 +78,16 @@
         .pix-type-btn.active { background: rgba(0, 231, 1, 0.1); border-color: var(--accent); color: var(--accent); }
 
         /* AFFILIATE */
-        .affiliate-link-container { display: flex; gap: 5px; margin-bottom: 20px; }
+        .affiliate-card { background: #0f1923; border: 1px solid #00e701; padding: 15px; border-radius: 10px; margin-bottom: 15px; }
+        .affiliate-val { font-size: 24px; color: #00e701; font-weight: bold; }
         .affiliate-link-input { background: #0b1219 !important; text-align: center; font-size: 12px; color: white !important; border: 1px solid #333 !important; }
+        .affiliate-link-container { display: flex; gap: 5px; margin-bottom: 20px; }
+
+        /* TREND BAR */
+        .trend-bar-container { width: 100%; max-width: 500px; display: flex; gap: 5px; justify-content: center; margin-bottom: 20px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 50px; min-height: 32px; }
+        .trend-dot { width: 12px; height: 12px; border-radius: 50%; background: #333; transition: 0.3s; }
+        .trend-dot.win { background: #00e701; box-shadow: 0 0 10px #00e701; }
+        .trend-dot.loss { background: #ff4d4d; }
 
         .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
         .toast { background: #1a242d; color: white; padding: 15px 20px; border-radius: 8px; display: flex; align-items: center; gap: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); animation: slideIn 0.3s ease-out; min-width: 250px; border-left: 4px solid #00e701; }
@@ -134,8 +100,8 @@
         .welcome-title { font-size: 28px; font-weight: 900; color: white; margin-bottom: 10px; position: relative; z-index: 1; }
         .welcome-text { color: #b1bad3; font-size: 14px; margin-bottom: 30px; line-height: 1.5; position: relative; z-index: 1; }
         .welcome-btn { width: 100%; padding: 16px; border-radius: 8px; border: none; font-weight: 800; font-size: 16px; cursor: pointer; position: relative; z-index: 1; background: var(--accent); color: #000; text-transform: uppercase; }
-
-        /* FLOATING SUPPORT BUTTON */
+        
+        /* SUPPORT FLOAT */
         .support-float { position: fixed; bottom: 50px; right: 20px; width: 50px; height: 50px; background: #25D366; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 20px rgba(37, 211, 102, 0.4); cursor: pointer; z-index: 999; transition: 0.2s; font-size: 28px; text-decoration: none; }
         .support-float:hover { transform: scale(1.1); }
 
@@ -150,17 +116,11 @@
         .feed-money { color: #00e701; font-weight: bold; }
 
         @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes pulseGreen { 0% { transform: scale(1); text-shadow: 0 0 15px rgba(0, 231, 1, 0.6); } 50% { transform: scale(1.1); text-shadow: 0 0 30px rgba(0, 231, 1, 1); } 100% { transform: scale(1); } }
         @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes slideLeft { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
-        @keyframes shake {
-            0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); }
-            20% { transform: translate(-3px, 0px) rotate(1deg); } 30% { transform: translate(3px, 2px) rotate(0deg); }
-            40% { transform: translate(1px, -1px) rotate(1deg); } 50% { transform: translate(-1px, 2px) rotate(-1deg); }
-            60% { transform: translate(-3px, 1px) rotate(0deg); } 70% { transform: translate(3px, 1px) rotate(-1deg); }
-            80% { transform: translate(-1px, -1px) rotate(1deg); } 90% { transform: translate(1px, 2px) rotate(0deg); }
-            100% { transform: translate(1px, -2px) rotate(-1deg); }
-        }
+        @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-5px);} 75% {transform: translateX(5px);} }
         .shake-anim { animation: shake 0.5s; border: 2px solid #ff4d4d !important; }
 
         @media (max-width: 768px) {
@@ -200,7 +160,12 @@
         <div class="modal">
             <h2>🤝 Indique e Ganhe</h2>
             <p style="color:#b1bad3">Ganhe 10% de comissão vitalícia.</p>
-            <div class="user-card" style="margin-bottom:15px; text-align:center"><div style="color:#b1bad3;font-size:11px;margin-bottom:5px">GANHOS TOTAIS</div><div class="affiliate-val" style="font-size:28px;color:var(--accent);font-weight:900" id="aff-earnings">R$ 0.00</div></div>
+            <div class="affiliate-card">
+                <div style="color:#b1bad3;font-size:11px;margin-bottom:5px">GANHOS TOTAIS</div>
+                <div class="affiliate-val" id="aff-earnings">R$ 0.00</div>
+                <div style="color:#b1bad3;font-size:12px;margin-top:5px">Amigos: <span id="aff-count" style="color:white">0</span></div>
+            </div>
+            <label style="text-align:left">Seu Link</label>
             <div class="affiliate-link-container">
                 <input type="text" id="aff-link" readonly class="affiliate-link-input" value="Carregando...">
                 <button class="btn-main btn-primary" style="width: 80px; margin: 0;" onclick="copyAffiliateLink()">COPIAR</button>
@@ -237,6 +202,7 @@
     <div class="game-area">
         <div class="game-content">
             <div class="balance-badge">R$ <span id="balance">0.00</span></div>
+            <div class="trend-bar-container" id="trend-bar"></div>
             <div class="grid-container" id="grid-container"><div class="grid" id="grid"></div></div>
             <div class="stats-bar"><div id="multiplier-display">1.00x</div><div id="message-display">Faça sua aposta</div></div>
         </div>
