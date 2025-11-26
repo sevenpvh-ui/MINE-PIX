@@ -14,16 +14,42 @@ const Settings = require('./models/Settings');
 const app = express();
 
 // ==================================================================
-// ⚙️ CONFIGURAÇÕES GERAIS
+// 🔒 SISTEMA ANTI-PIRATARIA (TRAVA DE DOMÍNIO)
 // ==================================================================
 
-// CRÍTICO PARA O RENDER: Permite que o servidor confie no proxy
+// ⚠️ CONFIGURAÇÃO: Coloque aqui o domínio do cliente que comprou.
+// Exemplo: "minespix.com" ou "cliente-joao.onrender.com"
+const DOMINIO_AUTORIZADO = "mine-pix.onrender.com"; 
+
+app.use((req, res, next) => {
+    const host = req.get('host');
+    
+    // Se não for o domínio autorizado E não for localhost (teste), bloqueia.
+    if (!host.includes(DOMINIO_AUTORIZADO) && !host.includes("localhost")) {
+        console.error(`🚫 PIRATARIA DETECTADA: Tentativa de acesso via ${host}`);
+        
+        return res.status(403).send(`
+            <body style="background-color:#0f1923; color:#ff4d4d; font-family:sans-serif; display:flex; justify-content:center; align-items:center; height:100vh; flex-direction:column; text-align:center;">
+                <h1 style="font-size:3rem;">🚫 ACESSO NEGADO</h1>
+                <h2>Licença Inválida. Este software não está autorizado a rodar em: <br><span style="color:white">${host}</span></h2>
+                <p>Entre em contato com o desenvolvedor para adquirir uma licença.</p>
+            </body>
+        `);
+    }
+    next();
+});
+
+// ==================================================================
+// ⚙️ CONFIGURAÇÕES DO SERVIDOR
+// ==================================================================
+
+// CRÍTICO PARA O RENDER
 app.set('trust proxy', 1);
 
-// Proteção Anti-Spam (Rate Limit)
+// Proteção Anti-Spam
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 300, // Limite de requisições
+    windowMs: 15 * 60 * 1000, 
+    max: 300, 
     message: { error: "Muitas tentativas. Aguarde um pouco." }
 });
 app.use('/api/', limiter);
@@ -41,7 +67,7 @@ const SITE_URL = process.env.SITE_URL;
 mongoose.connect(MONGO_URI)
     .then(async () => {
         console.log("✅ MongoDB Conectado");
-        // Cria configurações padrões se não existirem
+        // Cria configs padrão se não existirem
         const settings = await Settings.findOne();
         if (!settings) {
             await Settings.create({ dailyBonus: 1.00, houseEdge: 0.95, adminPassword: 'admin123' });
@@ -50,7 +76,6 @@ mongoose.connect(MONGO_URI)
     })
     .catch(err => console.error("❌ Erro Mongo:", err));
 
-// Configuração Mercado Pago
 const client = new MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN });
 const payment = new Payment(client);
 
@@ -74,7 +99,6 @@ function validateCPF(cpf) {
     return true;
 }
 
-// Paga 10% de comissão para quem indicou
 async function payCommission(userId, amount) {
     try {
         const user = await User.findById(userId).populate('referredBy');
@@ -112,7 +136,6 @@ app.post('/api/auth/register', async (req, res) => {
         const cleanCpf = cpf.replace(/\D/g, ''); 
         if (await User.findOne({ cpf: cleanCpf })) return res.status(400).json({ error: "CPF já cadastrado" });
         
-        // Verifica Afiliado
         let referrerId = null;
         if (refCode && refCode.trim() !== "") {
             const referrer = await User.findOne({ affiliateCode: refCode.trim() });
@@ -184,32 +207,25 @@ app.get('/api/me/:userId', async (req, res) => {
 });
 
 // ==================================================================
-// 💰 FINANCEIRO (PIX, SAQUE, WEBHOOK)
+// 💰 FINANCEIRO
 // ==================================================================
 
 app.post('/api/payment/deposit', async (req, res) => {
     const { userId, amount } = req.body;
     try {
         const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
-
         const fakeEmail = `${user.cpf}@minespix.com`;
         
-        // Verifica se SITE_URL está configurado
-        const notificationUrl = SITE_URL ? `${SITE_URL}/api/webhook` : undefined;
-        if(!notificationUrl) console.warn("⚠️ AVISO: SITE_URL não configurado. Pix não será confirmado.");
-
         const body = { 
             transaction_amount: parseFloat(amount), 
             description: 'Creditos Mines Pix', 
             payment_method_id: 'pix', 
             payer: { email: fakeEmail, first_name: user.name.split(' ')[0] }, 
-            notification_url: notificationUrl 
+            notification_url: `${SITE_URL}/api/webhook` 
         };
 
         const result = await payment.create({ body });
         
-        // Extração segura dos dados do QR Code
         const copyPaste = result.point_of_interaction?.transaction_data?.qr_code;
         const base64 = result.point_of_interaction?.transaction_data?.qr_code_base64;
         const paymentId = result.id.toString();
@@ -227,26 +243,26 @@ app.post('/api/payment/deposit', async (req, res) => {
         await user.save();
         
         res.json({ copyPaste: copyPaste, qrCodeBase64: base64, paymentId: paymentId });
-        
     } catch (e) { 
         console.error("Erro MP:", e);
         res.status(500).json({ error: "Erro ao gerar PIX. Verifique Logs." }); 
     }
 });
 
-// WEBHOOK (IMPORTANTE: Recebe aviso do Mercado Pago)
+// Rota de Simulação REMOVIDA para segurança. 
+// Se o cliente quiser testar, ele deve pagar R$ 1,00 via PIX.
+
 app.post('/api/webhook', async (req, res) => {
     const paymentId = req.query.id || req.query['data.id'] || req.body.data?.id;
     const type = req.body.type;
 
-    res.sendStatus(200); // Responde OK rápido para o MP
+    res.sendStatus(200);
 
     if (paymentId && (type === 'payment' || req.body.action === 'payment.updated')) {
         try {
             const payInfo = await payment.get({ id: paymentId });
             
             if (payInfo.status === 'approved') {
-                // Busca por ID do pagamento (string)
                 const user = await User.findOne({ "transactions.mpPaymentId": paymentId.toString() });
                 
                 if (user) {
@@ -256,26 +272,11 @@ app.post('/api/webhook', async (req, res) => {
                         user.balance += trans.amount;
                         await user.save();
                         await payCommission(user._id, trans.amount);
-                        console.log(`✅ PIX Aprovado: ${user.name} - R$ ${trans.amount}`);
                     }
                 }
             }
         } catch (e) { console.error("Erro Webhook:", e); }
     }
-});
-
-// ROTA DEBUG (SIMULAÇÃO - REMOVER EM PRODUÇÃO SE QUISER)
-app.post('/api/debug/deposit', async (req, res) => {
-    const { userId, amount } = req.body;
-    try {
-        const user = await User.findById(userId);
-        const valor = parseFloat(amount);
-        user.balance += valor;
-        user.transactions.push({ type: 'deposit', amount: valor, status: 'approved', mpPaymentId: 'SIM_' + Date.now() });
-        await user.save();
-        await payCommission(userId, valor); 
-        res.json({ message: "Simulado!", balance: user.balance });
-    } catch (e) { res.status(500).json({ error: "Erro simulação" }); }
 });
 
 app.post('/api/payment/withdraw', async (req, res) => {
@@ -296,12 +297,12 @@ app.post('/api/payment/withdraw', async (req, res) => {
         });
         
         await user.save();
-        res.json({ message: "Solicitado! Aguarde aprovação.", balance: user.balance });
+        res.json({ message: "Saque solicitado! Aguarde aprovação.", balance: user.balance });
     } catch (e) { res.status(500).json({ error: "Erro no saque" }); }
 });
 
 // ==================================================================
-// 🤝 EXTRAS (Afiliados, Bônus, Ranking)
+// 🤝 EXTRAS
 // ==================================================================
 
 app.get('/api/affiliates/stats/:userId', async (req, res) => {
@@ -359,10 +360,9 @@ app.get('/api/leaderboard', async (req, res) => {
 });
 
 // ==================================================================
-// 🕵️ ADMIN (PAINEL DE CONTROLE)
+// 🕵️ ADMIN
 // ==================================================================
 
-// Função para checar senha do banco
 async function isAdmin(secret) {
     const settings = await Settings.findOne();
     const valid = settings ? settings.adminPassword : 'admin123';
@@ -464,7 +464,7 @@ app.post('/api/admin/user/update', async (req, res) => {
 });
 
 // ==================================================================
-// 💣 JOGO (MINES)
+// 💣 JOGO
 // ==================================================================
 
 app.post('/api/game/start', async (req, res) => {
@@ -502,11 +502,8 @@ app.post('/api/game/play', async (req, res) => {
         game.revealed[index] = true;
         user.markModified('activeGame.revealed');
         
-        // LÓGICA DE DERROTA (BOMBA)
         if (game.grid[index] === 'mine') {
             game.isGameOver = true;
-            
-            // Salva no histórico
             if(!user.gameHistory) user.gameHistory = [];
             user.gameHistory.push('loss');
             if(user.gameHistory.length > 20) user.gameHistory.shift();
@@ -515,14 +512,13 @@ app.post('/api/game/play', async (req, res) => {
             return res.json({ status: 'boom', grid: game.grid });
         }
         
-        // LÓGICA DE VITÓRIA
         game.diamondsFound++;
         
         const settings = await Settings.findOne();
         const currentEdge = settings ? settings.houseEdge : 0.95;
         
         let nextMult = game.currentMultiplier * calculateMultiplier(game.minesCount, game.diamondsFound - 1, currentEdge);
-        if(game.diamondsFound === 1) nextMult = calculateMultiplier(game.minesCount, 0, currentEdge);
+        if(game.diamondsFound === 1 && nextMult < 1.01) nextMult = 1.01;
         
         game.currentMultiplier = nextMult;
         await user.save();
