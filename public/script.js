@@ -16,11 +16,7 @@ const sounds = {
 };
 
 function playSound(name) { 
-    try { 
-        const s = sounds[name].cloneNode(); 
-        s.volume = 0.5; 
-        s.play().catch(()=>{}); 
-    } catch(e){ console.error("Erro som", e); } 
+    try { const s = sounds[name].cloneNode(); s.volume = 0.5; s.play().catch(()=>{}); } catch(e){} 
 }
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -34,6 +30,7 @@ setTimeout(() => { if (!currentUser) document.getElementById('welcome-modal').cl
 function showRegisterFromWelcome() { document.getElementById('welcome-modal').classList.add('hidden'); showRegister(); }
 function showLoginFromWelcome() { document.getElementById('welcome-modal').classList.add('hidden'); showLogin(); }
 
+// TOAST
 function showToast(msg, type='success') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
@@ -43,11 +40,10 @@ function showToast(msg, type='success') {
     setTimeout(() => { toast.style.animation = 'fadeOut 0.5s forwards'; setTimeout(() => toast.remove(), 500); }, 3000);
 }
 
-// --- HELPER LOADING ---
 function setLoading(btnElement, isLoading) {
     if (isLoading) {
         btnElement.dataset.originalText = btnElement.innerText;
-        btnElement.innerText = "Processando...";
+        btnElement.innerText = "Aguarde...";
         btnElement.disabled = true;
         btnElement.style.opacity = "0.7";
     } else {
@@ -57,25 +53,27 @@ function setLoading(btnElement, isLoading) {
     }
 }
 
-// --- UI ---
+// TELAS
 function showRegister() { document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('register-modal').classList.remove('hidden'); }
 function showLogin() { document.getElementById('register-modal').classList.add('hidden'); document.getElementById('recover-modal').classList.add('hidden'); document.getElementById('auth-screen').classList.remove('hidden'); }
 function showRecover() { document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('recover-modal').classList.remove('hidden'); }
 
 function openModal(id) { playSound('click'); document.getElementById(id).classList.remove('hidden'); if(id==='profile-modal') loadTransactions(); if(id==='affiliate-modal') loadAffiliateStats(); if(id==='ranking-modal') loadRanking(); }
 function closeModal(id) { playSound('click'); document.getElementById(id).classList.add('hidden'); }
-function selectPixType(type) { document.getElementById('pix-type').value = type; document.querySelectorAll('.pix-type-btn').forEach(b => b.classList.remove('active')); event.target.classList.add('active'); }
+
+function selectPixType(type) { 
+    document.getElementById('pix-type').value = type; 
+    document.querySelectorAll('.pix-type-btn').forEach(b => b.classList.remove('active')); 
+    event.target.classList.add('active'); 
+}
 
 // --- AUTH ---
 async function login() {
     const cpf = document.getElementById('login-cpf').value;
     const password = document.getElementById('login-pass').value;
     const loginBtn = document.querySelector('#auth-screen button');
-    
     if(!cpf || !password) return showToast("Preencha tudo", 'error');
-    playSound('click');
-    setLoading(loginBtn, true);
-
+    playSound('click'); setLoading(loginBtn, true);
     try {
         const res = await fetch('/api/auth/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({cpf, password}) });
         const data = await res.json();
@@ -86,7 +84,7 @@ async function login() {
             document.getElementById('user-cpf-display').innerText = data.cpf;
             if(data.name) document.getElementById('user-name-display').innerText = data.name.split(' ')[0];
             updateBalance(); initGame(); showToast(`Bem-vindo!`);
-            updateTrendBar(data.history || []); 
+            if(data.history) updateTrendBar(data.history);
         } else { showToast(data.error, 'error'); }
     } catch (error) { showToast("Erro conexão", 'error'); }
     finally { setLoading(loginBtn, false); }
@@ -99,11 +97,10 @@ async function register() {
     const password = document.getElementById('reg-pass').value;
     const refCode = document.getElementById('reg-ref').value;
     const regBtn = document.querySelector('#register-modal button');
-
+    
     if(!name || !cpf || !phone || !password) return showToast("Preencha tudo", 'error');
-    playSound('click');
-    setLoading(regBtn, true);
-
+    playSound('click'); setLoading(regBtn, true);
+    
     try {
         const res = await fetch('/api/auth/register', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({name, cpf, phone, password, refCode}) });
         const data = await res.json();
@@ -114,8 +111,7 @@ async function register() {
             document.getElementById('welcome-modal').classList.add('hidden');
             document.getElementById('user-cpf-display').innerText = data.cpf;
             if(data.name) document.getElementById('user-name-display').innerText = data.name.split(' ')[0];
-            updateBalance(); initGame();
-            updateTrendBar([]); 
+            updateBalance(); initGame(); updateTrendBar([]);
         } else { showToast(data.error, 'error'); }
     } catch (error) { showToast("Erro registro", 'error'); }
     finally { setLoading(regBtn, false); }
@@ -137,6 +133,7 @@ async function resetPassword() {
 
 // --- EXTRAS ---
 function updateTrendBar(history) {
+    if(!trendEl) return;
     trendEl.innerHTML = '';
     history.forEach(result => {
         const dot = document.createElement('div');
@@ -169,46 +166,27 @@ async function loadAffiliateStats() {
     } catch(e) {}
 }
 
-// --- FUNÇÃO COPIAR CORRIGIDA E BLINDADA ---
+// FUNÇÃO COPIAR BLINDADA
 function copyToClipboard(elementId) {
     playSound('click');
     const copyText = document.getElementById(elementId);
-    
-    // Seleciona o texto (Necessário para alguns celulares)
     copyText.select();
-    copyText.setSelectionRange(0, 99999); // Para dispositivos móveis
-
-    // Tenta usar a API moderna primeiro
+    copyText.setSelectionRange(0, 99999); // Mobile support
+    
     if (navigator.clipboard) {
         navigator.clipboard.writeText(copyText.value).then(() => {
-            showToast("Copiado com sucesso!");
+            showToast("Copiado!");
         }).catch(() => {
-            // Se falhar, tenta o método antigo
-            try {
-                document.execCommand("copy");
-                showToast("Copiado!");
-            } catch (err) {
-                showToast("Erro ao copiar. Tente manualmente.", 'error');
-            }
+            // Fallback
+            try { document.execCommand("copy"); showToast("Copiado!"); } catch (err) { showToast("Erro ao copiar", 'error'); }
         });
     } else {
-        // Fallback para navegadores muito antigos
-        try {
-            document.execCommand("copy");
-            showToast("Copiado!");
-        } catch (err) {
-            showToast("Erro ao copiar.", 'error');
-        }
+        // Fallback antigo
+        try { document.execCommand("copy"); showToast("Copiado!"); } catch (err) { showToast("Erro ao copiar", 'error'); }
     }
 }
-
-function copyAffiliateLink() {
-    copyToClipboard("aff-link");
-}
-
-function copyPix() { 
-    copyToClipboard("copy-paste");
-}
+function copyAffiliateLink() { copyToClipboard("aff-link"); }
+function copyPix() { copyToClipboard("copy-paste"); }
 
 async function claimBonus() {
     if(!currentUser) return;
@@ -254,6 +232,7 @@ async function generatePix() {
     playSound('click');
     const amount = document.getElementById('dep-amount').value;
     const payBtn = document.querySelector('#deposit-modal .btn-primary');
+    
     if(!amount || amount < 1) return showToast("Mínimo R$ 1,00", 'error');
     
     setLoading(payBtn, true);
@@ -284,7 +263,7 @@ async function requestWithdraw() {
     const pixKey = document.getElementById('pix-key').value;
     const pixKeyType = document.getElementById('pix-type').value;
     const wBtn = document.querySelector('#withdraw-modal .btn-primary');
-
+    
     if(!amount || !pixKey) return showToast("Preencha tudo", 'error');
     setLoading(wBtn, true);
     
@@ -301,13 +280,7 @@ function initGame() { renderGrid(true); btn.onclick = handleAction; }
 
 async function updateBalance() {
     if(!currentUser) return;
-    try { 
-        const res = await fetch(`/api/me/${currentUser.userId}`); 
-        const data = await res.json(); 
-        balanceEl.innerText = parseFloat(data.balance).toFixed(2); 
-        if(data.name) document.getElementById('user-name-display').innerText = data.name.split(' ')[0];
-        if(data.history) updateTrendBar(data.history);
-    } catch(e) {}
+    try { const res = await fetch(`/api/me/${currentUser.userId}`); const data = await res.json(); balanceEl.innerText = parseFloat(data.balance).toFixed(2); if(data.name) document.getElementById('user-name-display').innerText = data.name.split(' ')[0]; if(data.history) updateTrendBar(data.history); } catch(e) {}
 }
 
 function renderGrid(disabled) {
@@ -331,7 +304,6 @@ async function handleAction() {
         const res = await fetch('/api/game/start', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({userId: currentUser.userId, betAmount: bet, minesCount: mines}) });
         const data = await res.json();
         if(data.error) return showToast(data.error, 'error');
-        
         isPlaying = true; updateBalance(); renderGrid(false); btn.innerText = "RETIRAR (Cashout)"; btn.classList.add('cashout-mode'); multEl.innerText = "1.00x";
     } else {
         const res = await fetch('/api/game/cashout', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({userId: currentUser.userId}) });
@@ -355,11 +327,7 @@ async function playRound(index, cellBtn) {
         cellBtn.innerHTML = '<img src="bomb.png" style="width:95%; transform:scale(1.5)">';
         cellBtn.classList.add('boom'); 
         const container = document.getElementById('grid-container');
-        if (container) {
-            container.classList.remove('shake-anim'); 
-            void container.offsetWidth; 
-            container.classList.add('shake-anim');
-        }
+        if (container) { container.classList.remove('shake-anim'); void container.offsetWidth; container.classList.add('shake-anim'); }
         finishGame(false, 0, data.grid);
     }
 }
@@ -373,6 +341,6 @@ function finishGame(win, amount, fullGrid) {
             if(type === 'mine') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="bomb.png" style="width:95%; transform:scale(1.5); opacity:0.5">';
             if(type === 'diamond') if(!cells[i].innerHTML) cells[i].innerHTML = '<img src="diamond.png" style="width:95%; transform:scale(1.5); opacity:0.5">';
         });
-    } catch(e) { console.error("Erro ao revelar grid", e); }
+    } catch(e) {}
     if(win) { playSound('win'); showToast(`GANHOU R$ ${amount}!`); confetti(); } else { showToast("Você perdeu!", 'error'); }
 }
