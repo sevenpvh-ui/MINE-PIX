@@ -14,16 +14,16 @@ const Settings = require('./models/Settings');
 const app = express();
 
 // ==================================================================
-// ⚙️ CONFIGURAÇÕES
+// ⚙️ CONFIGURAÇÕES GERAIS
 // ==================================================================
 
-// ESSENCIAL PARA O RENDER (Rate Limit + Afiliados)
+// CRÍTICO PARA O RENDER: Permite que o servidor confie no proxy
 app.set('trust proxy', 1);
 
-// Proteção Anti-Spam
+// Proteção Anti-Spam (Rate Limit)
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, 
-    max: 300, 
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 300, // Limite de requisições
     message: { error: "Muitas tentativas. Aguarde um pouco." }
 });
 app.use('/api/', limiter);
@@ -41,7 +41,7 @@ const SITE_URL = process.env.SITE_URL;
 mongoose.connect(MONGO_URI)
     .then(async () => {
         console.log("✅ MongoDB Conectado");
-        // Garante configuração inicial
+        // Cria configurações padrões se não existirem
         const settings = await Settings.findOne();
         if (!settings) {
             await Settings.create({ dailyBonus: 1.00, houseEdge: 0.95, adminPassword: 'admin123' });
@@ -50,6 +50,7 @@ mongoose.connect(MONGO_URI)
     })
     .catch(err => console.error("❌ Erro Mongo:", err));
 
+// Configuração Mercado Pago
 const client = new MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN });
 const payment = new Payment(client);
 
@@ -73,12 +74,13 @@ function validateCPF(cpf) {
     return true;
 }
 
+// Paga 10% de comissão para quem indicou
 async function payCommission(userId, amount) {
     try {
         const user = await User.findById(userId).populate('referredBy');
         if (user && user.referredBy) {
             const referrer = user.referredBy;
-            const commission = amount * 0.10; // 10%
+            const commission = amount * 0.10; 
             
             referrer.balance += commission;
             referrer.affiliateEarnings = (referrer.affiliateEarnings || 0) + commission;
@@ -110,6 +112,7 @@ app.post('/api/auth/register', async (req, res) => {
         const cleanCpf = cpf.replace(/\D/g, ''); 
         if (await User.findOne({ cpf: cleanCpf })) return res.status(400).json({ error: "CPF já cadastrado" });
         
+        // Verifica Afiliado
         let referrerId = null;
         if (refCode && refCode.trim() !== "") {
             const referrer = await User.findOne({ affiliateCode: refCode.trim() });
@@ -171,88 +174,108 @@ app.get('/api/me/:userId', async (req, res) => {
         if(!user) return res.status(404).json({error: "User not found"});
         if (user.isBanned) return res.status(403).json({ error: "Banido" });
         
-        // Retorna também histórico de jogo
         res.json({ 
             balance: user.balance, 
             name: user.name, 
             cpf: user.cpf,
-            history: user.gameHistory ? user.gameHistory.slice(-15) : []
+            history: user.gameHistory ? user.gameHistory.slice(-15) : [] 
         });
     } catch (e) { res.status(500).json({ error: "Erro" }); }
 });
 
 // ==================================================================
-// 💰 FINANCEIRO
+// 💰 FINANCEIRO (PIX, SAQUE, WEBHOOK)
 // ==================================================================
 
 app.post('/api/payment/deposit', async (req, res) => {
     const { userId, amount } = req.body;
     try {
         const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
+
         const fakeEmail = `${user.cpf}@minespix.com`;
         
+        // Verifica se SITE_URL está configurado
+        const notificationUrl = SITE_URL ? `${SITE_URL}/api/webhook` : undefined;
+        if(!notificationUrl) console.warn("⚠️ AVISO: SITE_URL não configurado. Pix não será confirmado.");
+
         const body = { 
             transaction_amount: parseFloat(amount), 
             description: 'Creditos Mines Pix', 
             payment_method_id: 'pix', 
-            payer: { email: fakeEmail }, 
-            notification_url: `${SITE_URL}/api/webhook` 
+            payer: { email: fakeEmail, first_name: user.name.split(' ')[0] }, 
+            notification_url: notificationUrl 
         };
 
         const result = await payment.create({ body });
         
+        // Extração segura dos dados do QR Code
+        const copyPaste = result.point_of_interaction?.transaction_data?.qr_code;
+        const base64 = result.point_of_interaction?.transaction_data?.qr_code_base64;
+        const paymentId = result.id.toString();
+
+        if(!copyPaste) throw new Error("MP não retornou QR Code");
+
         user.transactions.push({ 
             type: 'deposit', 
             amount: parseFloat(amount), 
             status: 'pending', 
-            mpPaymentId: result.id.toString(), 
-            qrCodeBase64: result.point_of_interaction.transaction_data.qr_code_base64 
+            mpPaymentId: paymentId, 
+            qrCodeBase64: base64 
         });
+        
         await user.save();
         
-        res.json({ 
-            copyPaste: result.point_of_interaction.transaction_data.qr_code, 
-            qrCodeBase64: result.point_of_interaction.transaction_data.qr_code_base64, 
-            paymentId: result.id 
-        });
-    } catch (e) { res.status(500).json({ error: "Erro ao gerar PIX" }); }
+        res.json({ copyPaste: copyPaste, qrCodeBase64: base64, paymentId: paymentId });
+        
+    } catch (e) { 
+        console.error("Erro MP:", e);
+        res.status(500).json({ error: "Erro ao gerar PIX. Verifique Logs." }); 
+    }
 });
 
-app.post('/api/debug/deposit', async (req, res) => {
-    const { userId, amount } = req.body;
-    try {
-        const user = await User.findById(userId);
-        const valor = parseFloat(amount);
-        
-        user.balance += valor;
-        user.transactions.push({ type: 'deposit', amount: valor, status: 'approved', mpPaymentId: 'SIM_' + Date.now() });
-        
-        await user.save();
-        await payCommission(userId, valor); 
-        res.json({ message: "Simulado!", balance: user.balance });
-    } catch (e) { res.status(500).json({ error: "Erro simulação" }); }
-});
-
+// WEBHOOK (IMPORTANTE: Recebe aviso do Mercado Pago)
 app.post('/api/webhook', async (req, res) => {
-    const { action, data } = req.body;
-    if (action === 'payment.created' || action === 'payment.updated') {
+    const paymentId = req.query.id || req.query['data.id'] || req.body.data?.id;
+    const type = req.body.type;
+
+    res.sendStatus(200); // Responde OK rápido para o MP
+
+    if (paymentId && (type === 'payment' || req.body.action === 'payment.updated')) {
         try {
-            const payInfo = await payment.get({ id: data.id });
+            const payInfo = await payment.get({ id: paymentId });
+            
             if (payInfo.status === 'approved') {
-                const user = await User.findOne({ "transactions.mpPaymentId": data.id });
+                // Busca por ID do pagamento (string)
+                const user = await User.findOne({ "transactions.mpPaymentId": paymentId.toString() });
+                
                 if (user) {
-                    const trans = user.transactions.find(t => t.mpPaymentId == data.id);
+                    const trans = user.transactions.find(t => t.mpPaymentId === paymentId.toString());
                     if (trans && trans.status === 'pending') {
                         trans.status = 'approved';
                         user.balance += trans.amount;
                         await user.save();
                         await payCommission(user._id, trans.amount);
+                        console.log(`✅ PIX Aprovado: ${user.name} - R$ ${trans.amount}`);
                     }
                 }
             }
-        } catch (e) {}
+        } catch (e) { console.error("Erro Webhook:", e); }
     }
-    res.status(200).send("OK");
+});
+
+// ROTA DEBUG (SIMULAÇÃO - REMOVER EM PRODUÇÃO SE QUISER)
+app.post('/api/debug/deposit', async (req, res) => {
+    const { userId, amount } = req.body;
+    try {
+        const user = await User.findById(userId);
+        const valor = parseFloat(amount);
+        user.balance += valor;
+        user.transactions.push({ type: 'deposit', amount: valor, status: 'approved', mpPaymentId: 'SIM_' + Date.now() });
+        await user.save();
+        await payCommission(userId, valor); 
+        res.json({ message: "Simulado!", balance: user.balance });
+    } catch (e) { res.status(500).json({ error: "Erro simulação" }); }
 });
 
 app.post('/api/payment/withdraw', async (req, res) => {
@@ -273,7 +296,7 @@ app.post('/api/payment/withdraw', async (req, res) => {
         });
         
         await user.save();
-        res.json({ message: "Saque solicitado! Aguarde aprovação.", balance: user.balance });
+        res.json({ message: "Solicitado! Aguarde aprovação.", balance: user.balance });
     } catch (e) { res.status(500).json({ error: "Erro no saque" }); }
 });
 
@@ -336,7 +359,7 @@ app.get('/api/leaderboard', async (req, res) => {
 });
 
 // ==================================================================
-// 🕵️ ADMIN
+// 🕵️ ADMIN (PAINEL DE CONTROLE)
 // ==================================================================
 
 // Função para checar senha do banco
@@ -374,7 +397,11 @@ app.get('/api/admin/dashboard', async (req, res) => {
         });
         
         topAffiliates.sort((a,b) => b.earnings - a.earnings);
-        res.json({ totalUsers, totalBalance, pendingWithdrawals, financials: { deposited: totalDeposited, withdrawn: totalWithdrawn, profit: totalDeposited - totalWithdrawn }, topAffiliates: topAffiliates.slice(0, 10) });
+        res.json({ 
+            totalUsers, totalBalance, pendingWithdrawals,
+            financials: { deposited: totalDeposited, withdrawn: totalWithdrawn, profit: totalDeposited - totalWithdrawn },
+            topAffiliates: topAffiliates.slice(0, 10) 
+        });
     } catch(e) { res.status(500).json({ error: "Erro admin" }); }
 });
 
@@ -479,7 +506,7 @@ app.post('/api/game/play', async (req, res) => {
         if (game.grid[index] === 'mine') {
             game.isGameOver = true;
             
-            // Salva no histórico se existe
+            // Salva no histórico
             if(!user.gameHistory) user.gameHistory = [];
             user.gameHistory.push('loss');
             if(user.gameHistory.length > 20) user.gameHistory.shift();
@@ -488,15 +515,14 @@ app.post('/api/game/play', async (req, res) => {
             return res.json({ status: 'boom', grid: game.grid });
         }
         
-        // LÓGICA DE VITÓRIA (DIAMANTE)
+        // LÓGICA DE VITÓRIA
         game.diamondsFound++;
         
         const settings = await Settings.findOne();
         const currentEdge = settings ? settings.houseEdge : 0.95;
         
         let nextMult = game.currentMultiplier * calculateMultiplier(game.minesCount, game.diamondsFound - 1, currentEdge);
-        // CORREÇÃO MATEMÁTICA DE DIFICULDADE
-        if(game.diamondsFound === 1 && nextMult < 1.01) nextMult = 1.01;
+        if(game.diamondsFound === 1) nextMult = calculateMultiplier(game.minesCount, 0, currentEdge);
         
         game.currentMultiplier = nextMult;
         await user.save();
@@ -520,7 +546,6 @@ app.post('/api/game/cashout', async (req, res) => {
         user.balance += win;
         game.isGameOver = true;
         
-        // Salva histórico Vitória
         if(!user.gameHistory) user.gameHistory = [];
         user.gameHistory.push('win');
         if(user.gameHistory.length > 20) user.gameHistory.shift();
