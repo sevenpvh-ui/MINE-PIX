@@ -164,7 +164,6 @@ async function loadAffiliateStats() {
         const linkEl = document.getElementById('aff-link');
         if (linkEl) {
             linkEl.value = data.link;
-            // GARANTE VISIBILIDADE DO INPUT
             linkEl.style.color = "white";
             linkEl.style.opacity = "1";
         }
@@ -225,24 +224,49 @@ async function loadTransactions() {
     });
 }
 
+// FUNÇÃO DE DEPÓSITO COM DEBUG (ATUALIZADA)
 async function generatePix() {
     playSound('click');
     const amount = document.getElementById('dep-amount').value;
     const payBtn = document.querySelector('#deposit-modal .btn-primary');
+    
     if(!amount || amount < 1) return showToast("Mínimo R$ 1,00", 'error');
     
     setLoading(payBtn, true);
+    
     try {
-        const res = await fetch('/api/payment/deposit', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: currentUser.userId, amount }) });
+        console.log("Enviando requisição de depósito..."); 
+        
+        const res = await fetch('/api/payment/deposit', { 
+            method: 'POST', 
+            headers: {'Content-Type':'application/json'}, 
+            body: JSON.stringify({ userId: currentUser.userId, amount }) 
+        });
+
+        console.log("Status da resposta:", res.status); 
+
+        // Tenta ler o JSON. Se o servidor devolveu erro HTML (comum), vai falhar aqui e cair no catch
         const data = await res.json();
+        console.log("Dados recebidos:", data); 
+
         if(res.ok) {
             document.getElementById('pix-area').classList.remove('hidden');
             document.getElementById('qr-img').src = `data:image/jpeg;base64,${data.qrCodeBase64}`;
             document.getElementById('copy-paste').value = data.copyPaste;
+            
+            // Inicia verificação de saldo
             setInterval(async () => { await updateBalance(); }, 5000);
-        } else { showToast(data.error, 'error'); }
-    } catch(e) { showToast("Erro PIX", 'error'); }
-    finally { setLoading(payBtn, false); }
+        } else { 
+            console.error("Erro retornado pela API:", data.error); 
+            showToast(data.error || "Erro desconhecido", 'error'); 
+        }
+    } catch(e) { 
+        console.error("ERRO CRÍTICO NO FRONTEND:", e); 
+        showToast("Erro Técnico: Veja o Console (F12)", 'error'); 
+    }
+    finally { 
+        setLoading(payBtn, false); 
+    }
 }
 
 async function simulateDeposit() {
