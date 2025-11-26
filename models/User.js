@@ -11,9 +11,12 @@ const UserSchema = new mongoose.Schema({
     balance: { type: Number, default: 0.00 },
     pixKey: { type: String, default: '' },
     pixKeyType: { type: String, default: '' },
+    
+    // TRAVA DE SAQUE (Rollover) - NOVO CAMPO
+    withdrawalRollover: { type: Number, default: 0 }, 
 
-    // Controle de Acesso (NOVO)
-    isBanned: { type: Boolean, default: false }, // True = Bloqueado
+    // Controle de Acesso
+    isBanned: { type: Boolean, default: false },
     lastDailyBonus: { type: Date, default: null },
 
     // Sistema de Afiliados
@@ -40,7 +43,9 @@ const UserSchema = new mongoose.Schema({
         status: { type: String, enum: ['pending', 'approved', 'rejected'] },
         mpPaymentId: String,
         qrCodeBase64: String,
-        createdAt: { type: Date, default: Date.now }
+        createdAt: { type: Date, default: Date.now },
+        pixKey: String,
+        pixKeyType: String
     }]
 });
 
