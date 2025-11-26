@@ -17,7 +17,7 @@ const DOMINIO_AUTORIZADO = "mines-pix.onrender.com"; // Mude para o site do clie
 app.use((req, res, next) => {
     const host = req.get('host');
     if (!host.includes(DOMINIO_AUTORIZADO) && !host.includes("localhost")) {
-        return res.status(403).send("<h1>Licença Inválida.</h1>");
+        return res.status(403).send("<h1>Licença Inválida. Quer adquirir uma Licença VITALICIA ENTRE EM CONTATO CONOSCO 69 99908-3361</h1>");
     }
     next();
 });
