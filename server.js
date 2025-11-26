@@ -16,10 +16,13 @@ const app = express();
 // ==================================================================
 // 🔒 TRAVA DE DOMÍNIO (ANTI-PIRATARIA)
 // ==================================================================
+// ATENÇÃO: Quando vender ou mudar de domínio, altere o valor abaixo!
+// Se o domínio for diferente deste ou de localhost, o site não abrirá.
 const DOMINIO_AUTORIZADO = "mine-pix.onrender.com"; 
 
 app.use((req, res, next) => {
     const host = req.get('host');
+    // Verifica se é o domínio autorizado ou localhost (para testes)
     if (!host.includes(DOMINIO_AUTORIZADO) && !host.includes("localhost")) {
         return res.status(403).send("<h1>Licença Inválida.</h1>");
     }
@@ -34,7 +37,7 @@ app.set('trust proxy', 1);
 
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, 
-    max: 300, 
+    max: 1000, // Aumentado para 1000 para não bloquear jogadores rápidos
     message: { error: "Muitas tentativas. Aguarde um pouco." }
 });
 app.use('/api/', limiter);
@@ -60,6 +63,7 @@ mongoose.connect(MONGO_URI)
     })
     .catch(err => console.error("❌ Erro Mongo:", err));
 
+// Configuração Mercado Pago
 const client = new MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN });
 const payment = new Payment(client);
 
@@ -197,21 +201,37 @@ app.get('/api/me/:userId', async (req, res) => {
 });
 
 // ==================================================================
-// 💰 FINANCEIRO
+// 💰 FINANCEIRO (CORRIGIDO)
 // ==================================================================
 
 app.post('/api/payment/deposit', async (req, res) => {
     const { userId, amount } = req.body;
     try {
         const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
+
+        // Gera e-mail fictício para o MP (necessário para aprovação)
         const fakeEmail = `user_${user.cpf}@minespix.com`;
-        const notificationUrl = SITE_URL ? `${SITE_URL}/api/webhook` : undefined;
+        
+        // Define a URL de notificação apenas se o site estiver em HTTPS (Produção)
+        // O Mercado Pago rejeita localhost
+        let notificationUrl = undefined;
+        if (SITE_URL && SITE_URL.includes('https://')) {
+            notificationUrl = `${SITE_URL}/api/webhook`;
+        }
         
         const body = { 
             transaction_amount: parseFloat(amount), 
             description: 'Creditos Mines Pix', 
             payment_method_id: 'pix', 
-            payer: { email: fakeEmail, first_name: user.name.split(' ')[0] || 'User' }, 
+            payer: { 
+                email: fakeEmail, 
+                first_name: user.name.split(' ')[0] || 'User',
+                identification: {
+                    type: 'CPF',
+                    number: user.cpf 
+                }
+            }, 
             notification_url: notificationUrl 
         };
 
@@ -219,9 +239,12 @@ app.post('/api/payment/deposit', async (req, res) => {
         
         const copyPaste = result.point_of_interaction?.transaction_data?.qr_code;
         const base64 = result.point_of_interaction?.transaction_data?.qr_code_base64;
-        const paymentId = result.id.toString();
+        const paymentId = result.id ? result.id.toString() : null;
 
-        if(!copyPaste) throw new Error("MP não retornou QR Code");
+        if(!copyPaste || !paymentId) {
+            console.error("Resposta MP sem QR Code:", JSON.stringify(result));
+            throw new Error("Mercado Pago não retornou o PIX. Verifique o Access Token.");
+        }
 
         user.transactions.push({ 
             type: 'deposit', 
@@ -234,8 +257,9 @@ app.post('/api/payment/deposit', async (req, res) => {
         await user.save();
         res.json({ copyPaste: copyPaste, qrCodeBase64: base64, paymentId: paymentId });
     } catch (e) { 
-        console.error("Erro MP:", e);
-        res.status(500).json({ error: "Erro ao gerar PIX. Verifique Logs." }); 
+        console.error("Erro MP Detalhado:", e);
+        const errorMsg = e.cause?.description || e.message || "Erro interno no MP";
+        res.status(500).json({ error: "Erro ao gerar PIX: " + errorMsg }); 
     }
 });
 
