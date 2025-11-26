@@ -178,7 +178,23 @@
     <div id="register-modal" class="overlay hidden"><div class="modal"><h2>🚀 Criar Conta</h2><div class="input-group"><label>Nome Completo</label><input type="text" id="reg-name"></div><div class="input-group"><label>CPF</label><input type="tel" id="reg-cpf" maxlength="14"></div><div class="input-group"><label>Telefone</label><input type="tel" id="reg-phone"></div><div class="input-group"><label>Senha</label><input type="password" id="reg-pass"></div><input type="hidden" id="reg-ref"><button class="btn-main btn-primary" onclick="register()">CADASTRAR</button><div style="margin-top:15px"><span onclick="showLogin()" style="cursor:pointer;color:var(--text-muted);font-size:12px">Já tenho conta</span></div></div></div>
     <div id="recover-modal" class="overlay hidden"><div class="modal"><h2>🔑 Recuperar</h2><input type="tel" id="rec-cpf" placeholder="CPF"><input type="text" id="rec-name" placeholder="Nome"><input type="tel" id="rec-phone" placeholder="Telefone"><input type="password" id="rec-newpass" placeholder="Nova Senha"><button class="btn-main btn-primary" onclick="resetPassword()">ALTERAR SENHA</button><div style="margin-top:15px"><span onclick="showLogin()" style="cursor:pointer;color:var(--text-muted)">Voltar</span></div></div></div>
 
-    <div id="deposit-modal" class="overlay hidden"><div class="modal"><h2>💰 Depositar</h2><input type="number" id="dep-amount" placeholder="Valor (Ex: 20.00)"><button class="btn-main btn-primary" onclick="generatePix()">GERAR PIX</button><button class="btn-main" style="background:#00a8ff;margin-top:10px" onclick="simulateDeposit()">⚡ SIMULAR</button><div id="pix-area" class="hidden" style="margin-top:15px"><img id="qr-img" src="" style="width:200px;border:2px solid white;border-radius:8px"><br><button class="btn-main btn-outline" style="margin-top:10px" onclick="copyPix()">COPIAR CÓDIGO</button></div><button class="close-btn" onclick="closeModal('deposit-modal')">FECHAR</button></div></div>
+    <div id="deposit-modal" class="overlay hidden">
+        <div class="modal">
+            <h2>💰 Depositar</h2>
+            <input type="number" id="dep-amount" placeholder="Valor (Ex: 20.00)">
+            
+            <button class="btn-main btn-primary" onclick="generatePix()">GERAR PIX</button>
+            
+            <div id="pix-area" class="hidden" style="margin-top:15px">
+                <img id="qr-img" src="" style="width:200px;border:2px solid white;border-radius:8px"><br>
+                <input type="text" id="copy-paste" readonly style="width:100%; margin-top:10px; background:#0f1923; border:1px solid #333; color:#aaa; font-size:10px; text-align:center;">
+                <button class="btn-main btn-outline" style="margin-top:10px" onclick="copyPix()">COPIAR CÓDIGO</button>
+            </div>
+            
+            <button class="close-btn" onclick="closeModal('deposit-modal')">FECHAR</button>
+        </div>
+    </div>
+    
     <div id="withdraw-modal" class="overlay hidden"><div class="modal"><h2>💸 Sacar</h2><input type="number" id="with-amount" placeholder="Valor"><div class="input-group"><label>Tipo de Chave</label><div class="pix-selector"><button class="pix-type-btn active" onclick="selectPixType('cpf')">CPF</button><button class="pix-type-btn" onclick="selectPixType('email')">E-mail</button><button class="pix-type-btn" onclick="selectPixType('phone')">Tel</button><button class="pix-type-btn" onclick="selectPixType('random')">Chave</button></div><input type="hidden" id="pix-type" value="cpf"></div><div class="input-group"><label>Chave PIX</label><input type="text" id="pix-key" placeholder="Digite sua chave"></div><button class="btn-main btn-primary" onclick="requestWithdraw()">SOLICITAR SAQUE</button><button class="close-btn" onclick="closeModal('withdraw-modal')">FECHAR</button></div></div>
     <div id="profile-modal" class="overlay hidden"><div class="modal" style="max-width:500px"><h2>📜 Extrato</h2><div style="max-height:300px;overflow-y:auto"><table style="width:100%;font-size:12px;text-align:left;color:#b1bad3"><thead><tr><th>Tipo</th><th>Valor</th><th>Status</th><th>Data</th></tr></thead><tbody id="transaction-list"></tbody></table></div><button class="btn-main btn-outline" style="margin-top:10px" onclick="closeModal('profile-modal')">FECHAR</button></div></div>
 
