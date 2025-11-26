@@ -6,6 +6,7 @@ const balanceEl = document.getElementById('balance');
 const msgEl = document.getElementById('message-display');
 const multEl = document.getElementById('multiplier-display');
 const btn = document.getElementById('action-btn');
+const trendEl = document.getElementById('trend-bar');
 
 const sounds = { 
     click: new Audio('click.mp3'), 
@@ -14,7 +15,13 @@ const sounds = {
     win: new Audio('win.mp3') 
 };
 
-function playSound(name) { try { const s = sounds[name].cloneNode(); s.volume = 0.5; s.play().catch(()=>{}); } catch(e){ console.error("Erro som", e); } }
+function playSound(name) { 
+    try { 
+        const s = sounds[name].cloneNode(); 
+        s.volume = 0.5; 
+        s.play().catch(()=>{}); 
+    } catch(e){ console.error("Erro som", e); } 
+}
 
 const urlParams = new URLSearchParams(window.location.search);
 const refCodeFromUrl = urlParams.get('ref');
@@ -36,25 +43,39 @@ function showToast(msg, type='success') {
     setTimeout(() => { toast.style.animation = 'fadeOut 0.5s forwards'; setTimeout(() => toast.remove(), 500); }, 3000);
 }
 
+// --- HELPER LOADING ---
+function setLoading(btnElement, isLoading) {
+    if (isLoading) {
+        btnElement.dataset.originalText = btnElement.innerText;
+        btnElement.innerText = "Processando...";
+        btnElement.disabled = true;
+        btnElement.style.opacity = "0.7";
+    } else {
+        btnElement.innerText = btnElement.dataset.originalText;
+        btnElement.disabled = false;
+        btnElement.style.opacity = "1";
+    }
+}
+
+// --- UI ---
 function showRegister() { document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('register-modal').classList.remove('hidden'); }
 function showLogin() { document.getElementById('register-modal').classList.add('hidden'); document.getElementById('recover-modal').classList.add('hidden'); document.getElementById('auth-screen').classList.remove('hidden'); }
 function showRecover() { document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('recover-modal').classList.remove('hidden'); }
 
 function openModal(id) { playSound('click'); document.getElementById(id).classList.remove('hidden'); if(id==='profile-modal') loadTransactions(); if(id==='affiliate-modal') loadAffiliateStats(); if(id==='ranking-modal') loadRanking(); }
 function closeModal(id) { playSound('click'); document.getElementById(id).classList.add('hidden'); }
+function selectPixType(type) { document.getElementById('pix-type').value = type; document.querySelectorAll('.pix-type-btn').forEach(b => b.classList.remove('active')); event.target.classList.add('active'); }
 
-function selectPixType(type) {
-    document.getElementById('pix-type').value = type;
-    document.querySelectorAll('.pix-type-btn').forEach(btn => btn.classList.remove('active'));
-    event.target.classList.add('active');
-}
-
-// AUTH
+// --- AUTH ---
 async function login() {
     const cpf = document.getElementById('login-cpf').value;
     const password = document.getElementById('login-pass').value;
+    const loginBtn = document.querySelector('#auth-screen button');
+    
     if(!cpf || !password) return showToast("Preencha tudo", 'error');
     playSound('click');
+    setLoading(loginBtn, true);
+
     try {
         const res = await fetch('/api/auth/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({cpf, password}) });
         const data = await res.json();
@@ -64,9 +85,11 @@ async function login() {
             document.getElementById('welcome-modal').classList.add('hidden');
             document.getElementById('user-cpf-display').innerText = data.cpf;
             if(data.name) document.getElementById('user-name-display').innerText = data.name.split(' ')[0];
-            updateBalance(); initGame(); showToast(`Bem-vindo, ${data.name.split(' ')[0]}!`);
+            updateBalance(); initGame(); showToast(`Bem-vindo!`);
+            updateTrendBar(data.history || []); 
         } else { showToast(data.error, 'error'); }
-    } catch (error) { showToast("Erro de conexão", 'error'); }
+    } catch (error) { showToast("Erro conexão", 'error'); }
+    finally { setLoading(loginBtn, false); }
 }
 
 async function register() {
@@ -75,8 +98,12 @@ async function register() {
     const phone = document.getElementById('reg-phone').value;
     const password = document.getElementById('reg-pass').value;
     const refCode = document.getElementById('reg-ref').value;
+    const regBtn = document.querySelector('#register-modal button');
+
     if(!name || !cpf || !phone || !password) return showToast("Preencha tudo", 'error');
     playSound('click');
+    setLoading(regBtn, true);
+
     try {
         const res = await fetch('/api/auth/register', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({name, cpf, phone, password, refCode}) });
         const data = await res.json();
@@ -88,8 +115,10 @@ async function register() {
             document.getElementById('user-cpf-display').innerText = data.cpf;
             if(data.name) document.getElementById('user-name-display').innerText = data.name.split(' ')[0];
             updateBalance(); initGame();
+            updateTrendBar([]); 
         } else { showToast(data.error, 'error'); }
     } catch (error) { showToast("Erro registro", 'error'); }
+    finally { setLoading(regBtn, false); }
 }
 
 async function resetPassword() {
@@ -106,7 +135,16 @@ async function resetPassword() {
     } catch(e) { showToast("Erro reset", 'error'); }
 }
 
-// EXTRAS
+// --- EXTRAS ---
+function updateTrendBar(history) {
+    trendEl.innerHTML = '';
+    history.forEach(result => {
+        const dot = document.createElement('div');
+        dot.className = `trend-dot ${result}`;
+        trendEl.appendChild(dot);
+    });
+}
+
 async function loadRanking() {
     const tbody = document.getElementById('ranking-list');
     tbody.innerHTML = '<tr><td colspan="3">Carregando...</td></tr>';
@@ -116,7 +154,7 @@ async function loadRanking() {
         tbody.innerHTML = '';
         data.forEach((u, index) => {
             let emoji = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : '•'));
-            tbody.innerHTML += `<tr style="border-bottom:1px solid rgba(255,255,255,0.1); height:30px"><td>${emoji}</td><td>${u.name}</td><td style="color:#00e701;font-weight:bold">R$ ${u.balance.toFixed(2)}</td></tr>`;
+            tbody.innerHTML += `<tr style="border-bottom:1px solid #333; height:30px"><td>${emoji}</td><td>${u.name}</td><td style="color:#00e701;font-weight:bold">R$ ${u.balance.toFixed(2)}</td></tr>`;
         });
     } catch(e) { tbody.innerHTML = '<tr><td colspan="3">Erro</td></tr>'; }
 }
@@ -125,21 +163,52 @@ async function loadAffiliateStats() {
     try {
         const res = await fetch(`/api/affiliates/stats/${currentUser.userId}`);
         const data = await res.json();
-        
-        const earningsEl = document.getElementById('aff-earnings');
-        if (earningsEl) earningsEl.innerText = `R$ ${Number(data.earnings).toFixed(2)}`;
-
+        document.getElementById('aff-earnings').innerText = `R$ ${data.earnings.toFixed(2)}`;
         const linkEl = document.getElementById('aff-link');
-        if (linkEl) {
-            linkEl.value = data.link;
-            // Garante que o texto fique visível
-            linkEl.style.color = "white";
-            linkEl.style.opacity = "1";
-        }
+        if(linkEl) linkEl.value = data.link;
     } catch(e) {}
 }
 
-function copyAffiliateLink() { playSound('click'); const c=document.getElementById("aff-link"); c.select(); document.execCommand("copy"); showToast("Link copiado!"); }
+// --- FUNÇÃO COPIAR CORRIGIDA E BLINDADA ---
+function copyToClipboard(elementId) {
+    playSound('click');
+    const copyText = document.getElementById(elementId);
+    
+    // Seleciona o texto (Necessário para alguns celulares)
+    copyText.select();
+    copyText.setSelectionRange(0, 99999); // Para dispositivos móveis
+
+    // Tenta usar a API moderna primeiro
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(copyText.value).then(() => {
+            showToast("Copiado com sucesso!");
+        }).catch(() => {
+            // Se falhar, tenta o método antigo
+            try {
+                document.execCommand("copy");
+                showToast("Copiado!");
+            } catch (err) {
+                showToast("Erro ao copiar. Tente manualmente.", 'error');
+            }
+        });
+    } else {
+        // Fallback para navegadores muito antigos
+        try {
+            document.execCommand("copy");
+            showToast("Copiado!");
+        } catch (err) {
+            showToast("Erro ao copiar.", 'error');
+        }
+    }
+}
+
+function copyAffiliateLink() {
+    copyToClipboard("aff-link");
+}
+
+function copyPix() { 
+    copyToClipboard("copy-paste");
+}
 
 async function claimBonus() {
     if(!currentUser) return;
@@ -165,7 +234,7 @@ function startLiveFeed() {
     }, 3000);
 }
 
-// FINANCEIRO
+// --- FINANCEIRO ---
 async function loadTransactions() {
     const tbody = document.getElementById('transaction-list');
     tbody.innerHTML = '<tr><td colspan="4">Carregando...</td></tr>';
@@ -184,33 +253,47 @@ async function loadTransactions() {
 async function generatePix() {
     playSound('click');
     const amount = document.getElementById('dep-amount').value;
-    const res = await fetch('/api/payment/deposit', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: currentUser.userId, amount }) });
-    const data = await res.json();
-    if(res.ok) {
-        document.getElementById('pix-area').classList.remove('hidden');
-        document.getElementById('qr-img').src = `data:image/jpeg;base64,${data.qrCodeBase64}`;
-        document.getElementById('copy-paste').value = data.copyPaste;
-        setInterval(async () => { await updateBalance(); }, 5000);
-    } else { showToast(data.error, 'error'); }
+    const payBtn = document.querySelector('#deposit-modal .btn-primary');
+    if(!amount || amount < 1) return showToast("Mínimo R$ 1,00", 'error');
+    
+    setLoading(payBtn, true);
+    try {
+        const res = await fetch('/api/payment/deposit', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: currentUser.userId, amount }) });
+        const data = await res.json();
+        if(res.ok) {
+            document.getElementById('pix-area').classList.remove('hidden');
+            document.getElementById('qr-img').src = `data:image/jpeg;base64,${data.qrCodeBase64}`;
+            document.getElementById('copy-paste').value = data.copyPaste;
+            setInterval(async () => { await updateBalance(); }, 5000);
+        } else { showToast(data.error, 'error'); }
+    } catch(e) { showToast("Erro PIX", 'error'); }
+    finally { setLoading(payBtn, false); }
 }
 
 async function simulateDeposit() {
     playSound('click');
     const amount = document.getElementById('dep-amount').value;
+    if(!amount || amount <= 0) return showToast("Valor inválido", 'error');
     const res = await fetch('/api/debug/deposit', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: currentUser.userId, amount }) });
     if(res.ok) { playSound('win'); showToast("✅ Simulado!"); updateBalance(); closeModal('deposit-modal'); } else { showToast("Erro", 'error'); }
 }
-
-function copyPix() { playSound('click'); const c=document.getElementById("copy-paste"); c.select(); document.execCommand("copy"); showToast("Copiado!"); }
 
 async function requestWithdraw() {
     playSound('click');
     const amount = document.getElementById('with-amount').value;
     const pixKey = document.getElementById('pix-key').value;
     const pixKeyType = document.getElementById('pix-type').value;
-    const res = await fetch('/api/payment/withdraw', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: currentUser.userId, amount, pixKey, pixKeyType }) });
-    const data = await res.json();
-    if(res.ok) { showToast("Solicitado!"); closeModal('withdraw-modal'); updateBalance(); } else { showToast(data.error, 'error'); }
+    const wBtn = document.querySelector('#withdraw-modal .btn-primary');
+
+    if(!amount || !pixKey) return showToast("Preencha tudo", 'error');
+    setLoading(wBtn, true);
+    
+    try {
+        const res = await fetch('/api/payment/withdraw', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: currentUser.userId, amount, pixKey, pixKeyType }) });
+        const data = await res.json();
+        if(res.ok) { showToast("Solicitado!"); closeModal('withdraw-modal'); updateBalance(); } else { showToast(data.error, 'error'); }
+    } catch(e) { showToast("Erro saque", 'error'); }
+    finally { setLoading(wBtn, false); }
 }
 
 // --- JOGO ---
@@ -218,7 +301,13 @@ function initGame() { renderGrid(true); btn.onclick = handleAction; }
 
 async function updateBalance() {
     if(!currentUser) return;
-    try { const res = await fetch(`/api/me/${currentUser.userId}`); const data = await res.json(); balanceEl.innerText = parseFloat(data.balance).toFixed(2); if(data.name) document.getElementById('user-name-display').innerText = data.name.split(' ')[0]; } catch(e) {}
+    try { 
+        const res = await fetch(`/api/me/${currentUser.userId}`); 
+        const data = await res.json(); 
+        balanceEl.innerText = parseFloat(data.balance).toFixed(2); 
+        if(data.name) document.getElementById('user-name-display').innerText = data.name.split(' ')[0];
+        if(data.history) updateTrendBar(data.history);
+    } catch(e) {}
 }
 
 function renderGrid(disabled) {
@@ -242,6 +331,7 @@ async function handleAction() {
         const res = await fetch('/api/game/start', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({userId: currentUser.userId, betAmount: bet, minesCount: mines}) });
         const data = await res.json();
         if(data.error) return showToast(data.error, 'error');
+        
         isPlaying = true; updateBalance(); renderGrid(false); btn.innerText = "RETIRAR (Cashout)"; btn.classList.add('cashout-mode'); multEl.innerText = "1.00x";
     } else {
         const res = await fetch('/api/game/cashout', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({userId: currentUser.userId}) });
@@ -253,6 +343,7 @@ async function handleAction() {
 async function playRound(index, cellBtn) {
     const res = await fetch('/api/game/play', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({userId: currentUser.userId, index}) });
     const data = await res.json();
+    
     if(data.status === 'safe') {
         playSound('diamond');
         multEl.innerText = `${data.multiplier}x`;
@@ -264,7 +355,11 @@ async function playRound(index, cellBtn) {
         cellBtn.innerHTML = '<img src="bomb.png" style="width:95%; transform:scale(1.5)">';
         cellBtn.classList.add('boom'); 
         const container = document.getElementById('grid-container');
-        if (container) { container.classList.remove('shake-anim'); void container.offsetWidth; container.classList.add('shake-anim'); }
+        if (container) {
+            container.classList.remove('shake-anim'); 
+            void container.offsetWidth; 
+            container.classList.add('shake-anim');
+        }
         finishGame(false, 0, data.grid);
     }
 }
